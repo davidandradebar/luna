@@ -21,9 +21,7 @@ def _problem(**overrides) -> RosterProblem:
             ShiftType("N", "19:00", "07:00", 12, True),
         ],
         coverage=[
-            CoverageRequirement("urgencias", d, code, "auxiliar", 1)
-            for d in range(3)
-            for code in ("M", "N")
+            CoverageRequirement("urgencias", d, code, "auxiliar", 1) for d in range(3) for code in ("M", "N")
         ],
     )
     base.update(overrides)
@@ -33,9 +31,7 @@ def _problem(**overrides) -> RosterProblem:
 def test_returns_up_to_three_distinct_proposals():
     proposals = solve(_problem())
     assert 1 <= len(proposals) <= 3
-    signatures = {
-        frozenset((a.employee_id, a.day, a.shift_code) for a in p.assignments) for p in proposals
-    }
+    signatures = {frozenset((a.employee_id, a.day, a.shift_code) for a in p.assignments) for p in proposals}
     assert len(signatures) == len(proposals)
 
 

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>2. Su equipo</h1>
+<p class="lead">Cada persona tiene su cargo, los servicios donde está habilitada y lo que prefiere. Las preferencias pueden llegar por WhatsApp.</p>
+
+<div class="legend">
+  <span class="pill pref">Preferencia</span> se intenta cumplir ·
+  <span class="pill hard">No disponible</span> se respeta siempre ·
+  <span class="pill prio">Prioridad</span> el mes pasado se le cumplió poco, este mes va primero
+</div>
+
+{% for role, people in groups.items() %}
+<h3>{{ clinic.role_label(role) }} <span class="muted">({{ people|length }})</span></h3>
+<table class="table">
+  <thead><tr><th>Nombre</th><th>Habilitado(a) en</th><th>Preferencias y disponibilidad</th></tr></thead>
+  <tbody>
+  {% for e in people %}
+    <tr>
+      <td>{{ e.name }}</td>
+      <td>{% for c in e.competencies %}<span class="tag">{{ clinic.service_label(c).replace('Hospitalización ', '') }}</span>{% endfor %}</td>
+      <td>
+        {% for p in prefs.get(e.id, []) %}<span class="pill pref">{{ p.note }}</span>{% endfor %}
+        {% for a in availability.get(e.id, []) %}<span class="pill hard">{{ a }}</span>{% endfor %}
+        {% set prio = clinic.priority(e.id) %}
+        {% if prio %}<span class="pill prio">Prioridad: el mes pasado {{ ((clinic.raw.history[e.id].last_month_fulfilled) * 100)|int }}% cumplido</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+
+<div class="card">
+  <h3>Agregar una preferencia o petición</h3>
+  <form method="post" class="form row" id="pref-form">
+    <select name="employee_id">{% for e in clinic.raw.employees %}<option value="{{ e.id }}">{{ e.name }}</option>{% endfor %}</select>
+    <select name="kind" id="pref-kind">
+      <option value="day_off">Pide un día libre</option>
+      <option value="prefer_shift">Prefiere un turno</option>
+      <option value="avoid_weekday">Evitar un día de la semana</option>
+    </select>
+    <input type="date" name="day" data-kind="day_off" min="{{ clinic.start.isoformat() }}" max="{{ clinic.date_of(clinic.days - 1).isoformat() }}" value="{{ clinic.date_of(19).isoformat() }}">
+    <select name="shift_code" data-kind="prefer_shift" hidden>{% for t in clinic.raw.shift_types %}<option value="{{ t.code }}">{{ t.label }}</option>{% endfor %}</select>
+    <select name="weekday" data-kind="avoid_weekday" hidden>{% for d in weekday_names %}<option value="{{ loop.index0 }}">{{ d }}</option>{% endfor %}</select>
+    <button class="btn">Agregar</button>
+  </form>
+</div>
+<div class="next"><a class="btn primary" href="{{ url_for('demo.generate') }}">Siguiente: generar →</a></div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const kind = document.getElementById('pref-kind');
+  const sync = () => document.querySelectorAll('#pref-form [data-kind]').forEach(el => el.hidden = el.dataset.kind !== kind.value);
+  kind.addEventListener('change', sync); sync();
+</script>
+{% endblock %}

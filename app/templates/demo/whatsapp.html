@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>WhatsApp</h1>
+<p class="lead">El equipo no necesita instalar nada: consulta, pide y avisa por WhatsApp. LUNA entiende el mensaje y valida contra las reglas. <span class="muted">(Simulado en la demo; requiere autorización de datos, Ley 1581.)</span></p>
+<div class="wa-layout">
+  <div class="card">
+    <label>Escribir como
+      <select id="wa-emp">{% for e in clinic.raw.employees %}<option value="{{ e.id }}">{{ e.name }}</option>{% endfor %}</select>
+    </label>
+    <p class="muted small">Pruebe:</p>
+    <div class="suggestions">
+      {% for s in ['¿Qué turno tengo el viernes?', '¿Cuántas horas llevo?', 'Necesito libre el 20', 'Prefiero las noches', 'Quiero cambiar mi turno del 12 con Carlos', 'Tengo incapacidad, no puedo ir mañana'] %}
+      <button class="chip" type="button">{{ s }}</button>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="phone">
+    <div class="phone-head">LUNA · Turnos</div>
+    <div class="chat" id="chat"><div class="msg bot">Hola, soy LUNA. ¿En qué te ayudo?</div></div>
+    <form id="wa-form" class="wa-input"><input id="wa-text" placeholder="Escribe un mensaje" autocomplete="off"><button>➤</button></form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const chat = document.getElementById('chat');
+  const add = (text, who) => { const d = document.createElement('div'); d.className = 'msg ' + who; d.textContent = text; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; };
+  const send = async (text) => {
+    if (!text.trim()) return;
+    add(text, 'me');
+    const r = await fetch('/api/whatsapp', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({employee_id: document.getElementById('wa-emp').value, text})});
+    add((await r.json()).reply, 'bot');
+  };
+  document.getElementById('wa-form').addEventListener('submit', e => { e.preventDefault(); const i = document.getElementById('wa-text'); send(i.value); i.value = ''; });
+  document.querySelectorAll('.suggestions .chip').forEach(b => b.addEventListener('click', () => send(b.textContent)));
+  document.getElementById('wa-emp').addEventListener('change', () => { chat.innerHTML = '<div class="msg bot">Hola, soy LUNA. ¿En qué te ayudo?</div>'; });
+</script>
+{% endblock %}

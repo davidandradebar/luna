@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>El cuadro de turnos del mes, listo en minutos</h1>
+  <p class="lead">Legal, justo, con las preferencias del equipo y con su costo calculado antes de publicarlo.</p>
+  <a class="btn primary big" href="{{ url_for('demo.clinic') }}">Empezar recorrido →</a>
+</section>
+
+<section>
+  <h2>¿Por qué armar el cuadro es tan difícil?</h2>
+  <p class="muted">Solo en este ejemplo, quien coordina tiene que cuadrar a mano todo esto, cada mes:</p>
+  <div class="stats">
+    <div class="stat"><b>{{ stats.people }}</b><span>personas con cargos y servicios distintos</span></div>
+    <div class="stat"><b>{{ stats.slots }}</b><span>turnos por cubrir en el mes</span></div>
+    <div class="stat"><b>{{ stats.preferences }}</b><span>preferencias y peticiones del equipo</span></div>
+    <div class="stat"><b>{{ stats.rules }}+</b><span>reglas legales y de la clínica que no se pueden romper</span></div>
+  </div>
+  <p class="muted">Y además: que nadie cargue siempre con las noches y los festivos, que no se crucen turnos, y saber cuánto va a costar antes de la nómina.</p>
+</section>
+
+<section>
+  <h2>Cómo lo resuelve LUNA</h2>
+  <ol class="how">
+    <li><b>Su clínica.</b> Servicios, turnos, cuánto personal necesita cada turno y sus reglas.</li>
+    <li><b>Su equipo.</b> Quién puede trabajar dónde, sus preferencias y peticiones del mes.</li>
+    <li><b>Generar.</b> LUNA propone 3 cuadros que cumplen todas las reglas.</li>
+    <li><b>Comparar.</b> Costo, preferencias cumplidas y reparto justo, lado a lado.</li>
+    <li><b>Publicar.</b> Usted elige y aprueba. LUNA nunca publica sola. El equipo recibe su turno por WhatsApp.</li>
+  </ol>
+</section>
+{% endblock %}

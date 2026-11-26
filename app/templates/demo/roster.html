@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+{% set p = summary.proposal %}
+<div class="title-row">
+  <h1>Cuadro: {{ p.strategy.label }}
+    {% if state.selected == summary.index %}<span class="badge">{{ state.status }}</span>{% else %}<span class="badge muted">borrador</span>{% endif %}</h1>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('demo.export', index=summary.index) }}">Exportar a Excel</a>
+    {% if state.selected != summary.index %}
+    <form method="post" action="{{ url_for('demo.publish', index=summary.index) }}"><button class="btn primary">Elegir y publicar</button></form>
+    {% endif %}
+  </div>
+</div>
+<p class="muted">Preferencias cumplidas <b>{{ (summary.pref_rate * 100)|round|int }}%</b> · Costo estimado <b>{{ summary.cost.total|cop }}</b> · Toque cualquier casilla para ver <b>por qué</b>.</p>
+
+<div class="tabs">
+  <a href="?servicio=todos" class="{{ 'active' if service == 'todos' }}">Todos</a>
+  {% for s in services %}<a href="?servicio={{ s.id }}" class="{{ 'active' if service == s.id }}">{{ s.name }}</a>{% endfor %}
+</div>
+<div class="legend">
+  {% for t in clinic.raw.shift_types %}<span class="shift shift-{{ t.code }}">{{ t.code }}</span> {{ t.label }} {{ t.start }}–{{ t.end }} &nbsp;{% endfor %}
+  <span class="shift shift-X">✕</span> Novedad &nbsp; <span class="holiday-key"></span> Domingo/festivo
+</div>
+<div class="grid-wrap">
+<table class="roster">
+  <thead>
+    <tr><th class="sticky">Persona</th>{% for d in days %}<th class="{{ 'holiday' if d.holiday }}">{{ weekday_short[d.weekday] }}<br>{{ d.number }}</th>{% endfor %}<th>Horas</th></tr>
+  </thead>
+  <tbody>
+  {% set ns = namespace(role='') %}
+  {% for e in employees %}
+    {% if e.role != ns.role %}{% set ns.role = e.role %}<tr class="group"><td class="sticky" colspan="{{ days|length + 2 }}">{{ clinic.role_label(e.role) }}</td></tr>{% endif %}
+    {% set hours = namespace(total=0) %}
+    <tr>
+      <td class="sticky name">{{ e.display_name }}</td>
+      {% for d in days %}
+        {% set a = grid.get((e.id, d.index)) %}
+        {% if a %}{% set hours.total = hours.total + state.problem.shift(a.shift_code).hours %}{% endif %}
+        <td class="cell {{ 'holiday' if d.holiday }} {{ 'dim' if a and service != 'todos' and a.service != service }}" data-emp="{{ e.id }}" data-day="{{ d.index }}">
+          {% if a %}<span class="shift shift-{{ a.shift_code }}" title="{{ clinic.service_label(a.service) }}">{{ a.shift_code }}</span>
+          {% elif (e.id, d.index) in absences %}<span class="shift shift-X">✕</span>{% endif %}
+        </td>
+      {% endfor %}
+      <td class="center"><b>{{ hours.total }}</b></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if state.log and state.selected == summary.index %}
+<div class="card"><h3>Ajustes</h3><ul>{% for l in state.log %}<li>{{ l }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+<dialog id="why">
+  <form method="dialog"><button class="close" aria-label="Cerrar">✕</button></form>
+  <p class="muted small" id="why-date"></p>
+  <h2 id="why-name"></h2>
+  <h3 id="why-title"></h3>
+  <ul id="why-lines" class="checks"></ul>
+  <p class="muted small" id="why-hours"></p>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+  const dlg = document.getElementById('why');
+  document.querySelectorAll('td.cell').forEach(td => td.addEventListener('click', async () => {
+    const r = await fetch(`/api/explicar/{{ summary.index }}/${td.dataset.emp}/${td.dataset.day}`);
+    const data = await r.json();
+    document.getElementById('why-date').textContent = data.date;
+    document.getElementById('why-name').textContent = data.employee;
+    document.getElementById('why-title').textContent = data.title;
+    const ul = document.getElementById('why-lines'); ul.innerHTML = '';
+    data.lines.forEach(l => { const li = document.createElement('li'); li.textContent = l; ul.appendChild(li); });
+    document.getElementById('why-hours').textContent = `Horas en el mes: ${data.month_hours}`;
+    dlg.showModal();
+  }));
+</script>
+{% endblock %}

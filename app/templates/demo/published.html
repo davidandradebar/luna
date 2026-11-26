@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>5. Publicado</h1>
+<p class="lead">Usted aprobó la propuesta <b>{{ state.chosen.strategy.label }}</b>. LUNA nunca publica sin la aprobación del coordinador.</p>
+<div class="cards two">
+  <div class="card">
+    <h3>Qué pasa ahora</h3>
+    <ul class="checks">
+      <li>Cada persona recibe su turno por WhatsApp ({{ state.problem.employees|length }} mensajes, simulado en la demo)</li>
+      <li>Un día antes de cada turno, LUNA le recuerda</li>
+      <li>Si alguien se incapacita, LUNA propone reemplazos legales al instante</li>
+      <li>Los cambios de turno se validan solos: el compañero acepta y el jefe aprueba con un clic</li>
+      <li>Al cierre del mes, las horas salen clasificadas para nómina</li>
+    </ul>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('demo.roster', index=state.selected) }}">Ver cuadro publicado</a>
+      <a class="btn" href="{{ url_for('demo.export', index=state.selected) }}">Exportar a Excel</a>
+    </div>
+  </div>
+  <div class="phone small-phone">
+    <div class="phone-head">LUNA · Turnos</div>
+    <div class="chat">
+      <div class="msg bot">Hola {{ sample.display_name.split()[0] }} 👋 Ya está publicado tu cuadro de {{ clinic.raw.period.label|lower }}. Tus primeros turnos:<br>
+        {% for a in first %}• {{ weekday_names[state.problem.weekday_of(a.day)] }} {{ a.day + 1 }}: {{ state.problem.shift(a.shift_code).label }} ({{ state.problem.shift(a.shift_code).start }}–{{ state.problem.shift(a.shift_code).end }})<br>{% endfor %}
+        Escríbeme si necesitas algo.</div>
+    </div>
+  </div>
+</div>
+<div class="next">
+  <a class="btn" href="{{ url_for('demo.absences') }}">Probar una novedad →</a>
+  <a class="btn primary" href="{{ url_for('demo.whatsapp') }}">Probar WhatsApp →</a>
+</div>
+{% endblock %}

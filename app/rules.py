@@ -31,9 +31,7 @@ class Rule:
         return self.valid_from <= on and (self.valid_to is None or on <= self.valid_to)
 
 
-def resolve_rule(
-    rules: list[Rule], key: str, regime: str, on: date, tenant_id: str | None = None
-) -> Rule:
+def resolve_rule(rules: list[Rule], key: str, regime: str, on: date, tenant_id: str | None = None) -> Rule:
     candidates = [r for r in rules if r.key == key and r.regime == regime and r.is_active(on)]
     scopes = [tenant_id, None] if tenant_id else [None]
     for scope in scopes:

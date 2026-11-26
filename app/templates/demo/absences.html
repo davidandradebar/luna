@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Novedades</h1>
+<p class="lead">Alguien se incapacita a última hora. LUNA busca quién puede cubrir sin romper ninguna regla.</p>
+<div class="card">
+  <form method="post" class="form row">
+    <select name="employee_id">{% for e in state.problem.employees %}<option value="{{ e.id }}">{{ e.display_name }} · {{ clinic.role_label(e.role) }}</option>{% endfor %}</select>
+    <label>Día <input type="number" name="day" min="1" max="{{ clinic.days }}" value="{{ state.today().day }}"></label>
+    <select name="kind">{% for k in kinds %}<option>{{ k }}</option>{% endfor %}</select>
+    <button class="btn primary">Registrar novedad</button>
+  </form>
+</div>
+
+{% if affected %}
+<div class="card">
+  <h3>{{ clinic.employee_name(affected.employee_id) }} no podrá cubrir: {{ state.problem.shift(affected.shift_code).label }} del día {{ affected.day + 1 }} en {{ clinic.service_label(affected.service) }}</h3>
+  {% if options %}
+  <p class="muted">Opciones que cumplen todas las reglas, empezando por quien tiene menos horas en el mes:</p>
+  <table class="table">
+    <thead><tr><th>Persona</th><th>Horas en el mes</th><th>Recargo de este turno</th><th>Por qué puede</th><th></th></tr></thead>
+    <tbody>
+    {% for o in options %}
+    <tr>
+      <td>{{ clinic.employee_name(o.employee_id) }}</td>
+      <td>{{ o.month_hours }} h</td>
+      <td>{{ o.surcharge|cop }}</td>
+      <td class="small">{{ o.notes|join(' · ') }}</td>
+      <td><form method="post" action="{{ url_for('demo.apply_replacement') }}">
+        <input type="hidden" name="employee_id" value="{{ affected.employee_id }}">
+        <input type="hidden" name="day" value="{{ affected.day }}">
+        <input type="hidden" name="shift_code" value="{{ affected.shift_code }}">
+        <input type="hidden" name="service" value="{{ affected.service }}">
+        <input type="hidden" name="replacement_id" value="{{ o.employee_id }}">
+        <button class="btn primary">Asignar</button></form></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="warn-text">Nadie del mismo cargo puede cubrir sin romper una regla. LUNA alertaría al coordinador para decidir (por ejemplo, horas extra autorizadas).</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
