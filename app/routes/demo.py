@@ -288,9 +288,13 @@ def published():
     state = get_state()
     if state.chosen is None:
         return redirect(url_for("demo.compare"))
-    sample = state.problem.employees[0]
-    first = state.chosen.for_employee(sample.id)[:3]
-    return render_template("demo/published.html", sample=sample, first=first, step=5)
+    notices, seen_roles = [], set()
+    for e in state.problem.employees:
+        if e.role in seen_roles:
+            continue
+        seen_roles.add(e.role)
+        notices.append({"employee": e, "shifts": state.chosen.for_employee(e.id)[:3]})
+    return render_template("demo/published.html", notices=notices[:4])
 
 
 @bp.route("/novedades", methods=["GET", "POST"])
