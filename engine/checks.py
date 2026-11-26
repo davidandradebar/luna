@@ -92,3 +92,17 @@ def suggest_replacements(
         result.append(Replacement(emp.id, hours, cost.surcharges, notes))
     result.sort(key=lambda r: (r.month_hours, r.surcharge))
     return result[:limit]
+
+
+def legal_alerts(problem: RosterProblem, proposal: RosterProposal) -> list[str]:
+    """Incumplimientos del cuadro: reglas rotas por asignación y turnos sin cubrir."""
+    from engine.metrics import coverage_gaps
+
+    alerts = []
+    for a in sorted(proposal.assignments, key=lambda a: (a.day, a.employee_id)):
+        reasons = blocking_reasons(problem, proposal, a.employee_id, a.day, a.shift_code, a.service, ignore=a)
+        name = problem.employee(a.employee_id).display_name
+        alerts += [f"Día {a.day + 1}, {name}: {r.lower()}" for r in reasons]
+    for gap in coverage_gaps(problem, proposal):
+        alerts.append(f"Día {gap.day + 1}: falta personal en {gap.service} ({gap.shift_code})")
+    return alerts

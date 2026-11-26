@@ -1,31 +1,152 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero">
-  <h1>El cuadro de turnos del mes, listo en minutos</h1>
-  <p class="lead">Legal, justo, con las preferencias del equipo y con su costo calculado antes de publicarlo.</p>
-  <a class="btn primary big" href="{{ url_for('demo.clinic') }}">Empezar recorrido →</a>
-</section>
-
-<section>
-  <h2>¿Por qué armar el cuadro es tan difícil?</h2>
-  <p class="muted">Solo en este ejemplo, quien coordina tiene que cuadrar a mano todo esto, cada mes:</p>
-  <div class="stats">
-    <div class="stat"><b>{{ stats.people }}</b><span>personas con cargos y servicios distintos</span></div>
-    <div class="stat"><b>{{ stats.slots }}</b><span>turnos por cubrir en el mes</span></div>
-    <div class="stat"><b>{{ stats.preferences }}</b><span>preferencias y peticiones del equipo</span></div>
-    <div class="stat"><b>{{ stats.rules }}+</b><span>reglas legales y de la clínica que no se pueden romper</span></div>
+<section class="intro">
+  <div>
+    <p class="eyebrow">Cuadro de turnos · {{ clinic.raw.period.label }}</p>
+    <h1>{% if summary %}El mes está listo para revisar{% else %}Arme el mes con un botón{% endif %}</h1>
+    <p class="lead">{{ people }} personas, {{ slots }} turnos por cubrir y {{ preferences }} preferencias del equipo. LUNA cumple todas las reglas y usted aprueba.</p>
   </div>
-  <p class="muted">Y además: que nadie cargue siempre con las noches y los festivos, que no se crucen turnos, y saber cuánto va a costar antes de la nómina.</p>
+  <div class="intro-actions">
+    {% if static_export %}
+      {% if not summary %}<a class="btn generate" href="{{ url_for('demo.home') }}">Generar cuadro</a>{% endif %}
+    {% else %}
+    <form method="post" action="{{ url_for('demo.generate') }}" id="gen-form">
+      <button class="btn generate" id="gen-btn">{% if summary %}Volver a generar{% else %}Generar cuadro{% endif %}</button>
+    </form>
+    {% endif %}
+    {% if summary %}
+      {% if static_export %}
+        <a class="btn primary" href="{{ url_for('demo.published') }}">Aprobar y publicar</a>
+      {% elif state.selected == summary.index %}
+        <span class="badge">{{ state.status|capitalize }}</span>
+      {% else %}
+        <form method="post" action="{{ url_for('demo.publish', index=summary.index) }}"><button class="btn primary">Aprobar y publicar</button></form>
+      {% endif %}
+    {% endif %}
+  </div>
+</section>
+<p class="wait" id="gen-wait" hidden>LUNA está armando el mes… unos segundos.</p>
+
+<section class="kpis-row">
+  <div class="kpi">
+    <span class="kpi-label">Costo estimado del mes</span>
+    <b class="kpi-value">{{ summary.cost.total|cop if summary else '—' }}</b>
+    <span class="kpi-note">{% if summary %}Incluye {{ summary.cost.surcharges|cop }} de recargos nocturnos y festivos{% else %}Se calcula antes de publicar{% endif %}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-label">Preferencias cumplidas</span>
+    <b class="kpi-value">{{ ((summary.pref_rate * 100)|round|int) ~ '%' if summary else '—' }}</b>
+    <span class="kpi-note">{% if summary %}{% if summary.unmet %}A {{ summary.unmet|length }} persona(s) no se les pudo cumplir{% else %}Todas cumplidas{% endif %}{% else %}Lo que pidió cada persona{% endif %}</span>
+  </div>
+  <div class="kpi {{ 'ok' if summary and not summary.alerts }} {{ 'alert' if summary and summary.alerts }}">
+    <span class="kpi-label">Alertas legales</span>
+    <b class="kpi-value">{{ summary.alerts|length if summary else '—' }}</b>
+    <span class="kpi-note">{% if summary %}{% if summary.alerts %}{{ summary.alerts[0] }}{% else %}Horas, descansos y cobertura en regla{% endif %}{% else %}Jornada, descansos y cobertura{% endif %}</span>
+  </div>
 </section>
 
-<section>
-  <h2>Cómo lo resuelve LUNA</h2>
-  <ol class="how">
-    <li><b>Su clínica.</b> Servicios, turnos, cuánto personal necesita cada turno y sus reglas.</li>
-    <li><b>Su equipo.</b> Quién puede trabajar dónde, sus preferencias y peticiones del mes.</li>
-    <li><b>Generar.</b> LUNA propone 3 cuadros que cumplen todas las reglas.</li>
-    <li><b>Comparar.</b> Costo, preferencias cumplidas y reparto justo, lado a lado.</li>
-    <li><b>Publicar.</b> Usted elige y aprueba. LUNA nunca publica sola. El equipo recibe su turno por WhatsApp.</li>
-  </ol>
+{% if summary %}
+<section class="versions" aria-label="Versiones">
+  <span class="muted small">LUNA preparó 3 versiones:</span>
+  {% for v in versions %}
+    <a href="{{ url_for('demo.home', v=v.index) }}" class="seg {{ 'active' if v.index == summary.index }}">{{ v.proposal.strategy.label }}{% if v.proposal.strategy.key == 'balanced' %} · recomendada{% endif %}</a>
+  {% endfor %}
 </section>
+
+<section class="board">
+  <div class="board-head">
+    <div class="tabs" id="svc-tabs">
+      <button class="active" data-svc="todos">Todos</button>
+      {% for s in clinic.raw.services %}<button data-svc="{{ s.id }}">{{ s.name.replace('Hospitalización ', '').capitalize() }}</button>{% endfor %}
+    </div>
+    <div class="legend">
+      {% for t in clinic.raw.shift_types %}<span><i class="shift shift-{{ t.code }}">{{ t.code }}</i> {{ t.label }} {{ t.start }}–{{ t.end }}</span>{% endfor %}
+      <span class="muted">Toque un turno para ver por qué</span>
+    </div>
+  </div>
+  <div class="grid-wrap">
+  <table class="roster">
+    <thead>
+      <tr><th class="sticky">Persona</th>{% for d in days %}<th class="{{ 'holiday' if d.holiday }}">{{ weekday_short[d.weekday] }}<br>{{ d.number }}</th>{% endfor %}<th>Horas</th></tr>
+    </thead>
+    <tbody>
+    {% set ns = namespace(role='') %}
+    {% for r in rows %}
+      {% set e = r.employee %}
+      {% if e.role != ns.role %}{% set ns.role = e.role %}<tr class="group"><td class="sticky" colspan="{{ days|length + 2 }}">{{ clinic.role_label(e.role) }}</td></tr>{% endif %}
+      <tr data-services="{{ r.services|join(' ') }}">
+        <td class="sticky name">{{ e.display_name }}</td>
+        {% for d in days %}
+          {% set a = grid.get((e.id, d.index)) %}
+          <td class="cell {{ 'holiday' if d.holiday }}" data-emp="{{ e.id }}" data-day="{{ d.index }}" {% if a %}data-svc="{{ a.service }}"{% endif %}>
+            {% if a %}<i class="shift shift-{{ a.shift_code }}">{{ a.shift_code }}</i>{% elif (e.id, d.index) in absences %}<i class="shift shift-X">✕</i>{% endif %}
+          </td>
+        {% endfor %}
+        <td class="center"><b>{{ r.hours }}</b></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% else %}
+<section class="empty">
+  <p>Todavía no hay cuadro para {{ clinic.raw.period.label|lower }}. Al tocar <b>Generar cuadro</b>, LUNA reparte los turnos respetando la ley, las reglas de la clínica y lo que pidió cada persona.</p>
+</section>
+{% endif %}
+
+<section class="details">
+  <h2>Ver detalle</h2>
+  <div class="detail-grid">
+    <a class="detail" href="{{ url_for('demo.clinic') }}"><b>Reglas de la clínica</b><span>Personal por turno, ley y límites propios</span></a>
+    <a class="detail" href="{{ url_for('demo.team') }}"><b>Equipo y preferencias</b><span>Quién puede dónde y qué pidió cada uno</span></a>
+    {% if summary %}<a class="detail" href="{{ url_for('demo.compare') }}"><b>Comparar versiones</b><span>Costo, preferencias y reparto de noches</span></a>{% endif %}
+    {% if summary %}<a class="detail" href="{{ url_for('demo.absences') }}"><b>Novedades</b><span>Una incapacidad y sus reemplazos legales</span></a>{% endif %}
+    <a class="detail" href="{{ url_for('demo.whatsapp') }}"><b>WhatsApp del equipo</b><span>Consultas, días libres y cambios de turno</span></a>
+    <a class="detail" href="{{ url_for('demo.generate') }}"><b>Cómo decide LUNA</b><span>Lo que nunca se rompe y lo que se busca cumplir</span></a>
+  </div>
+</section>
+
+<dialog id="why">
+  <form method="dialog"><button class="close" aria-label="Cerrar">✕</button></form>
+  <p class="muted small" id="why-date"></p>
+  <h2 id="why-name"></h2>
+  <h3 id="why-title"></h3>
+  <ul id="why-lines" class="checks"></ul>
+  <p class="muted small" id="why-hours"></p>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById('gen-form')?.addEventListener('submit', () => {
+    document.getElementById('gen-btn').disabled = true;
+    document.getElementById('gen-wait').hidden = false;
+  });
+  document.querySelectorAll('#svc-tabs button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#svc-tabs button').forEach(x => x.classList.toggle('active', x === b));
+    const svc = b.dataset.svc;
+    document.querySelectorAll('.roster tbody tr[data-services]').forEach(tr => {
+      tr.hidden = svc !== 'todos' && !tr.dataset.services.split(' ').includes(svc);
+    });
+    document.querySelectorAll('.roster td.cell[data-svc]').forEach(td => td.classList.toggle('dim', svc !== 'todos' && td.dataset.svc !== svc));
+  }));
+  {% if summary %}
+  const dlg = document.getElementById('why');
+  document.querySelectorAll('td.cell').forEach(td => td.addEventListener('click', async () => {
+    {% if static_export %}
+    window.LUNA_EXPLAIN = window.LUNA_EXPLAIN || await (await fetch('explicaciones-{{ summary.index }}.json')).json();
+    const data = window.LUNA_EXPLAIN[`${td.dataset.emp}/${td.dataset.day}`];
+    {% else %}
+    const data = await (await fetch(`/api/explicar/{{ summary.index }}/${td.dataset.emp}/${td.dataset.day}`)).json();
+    {% endif %}
+    document.getElementById('why-date').textContent = data.date;
+    document.getElementById('why-name').textContent = data.employee;
+    document.getElementById('why-title').textContent = data.title;
+    const ul = document.getElementById('why-lines'); ul.innerHTML = '';
+    data.lines.forEach(l => { const li = document.createElement('li'); li.textContent = l; ul.appendChild(li); });
+    document.getElementById('why-hours').textContent = `Horas en el mes: ${data.month_hours}`;
+    dlg.showModal();
+  }));
+  {% endif %}
+</script>
 {% endblock %}

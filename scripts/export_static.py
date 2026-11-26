@@ -29,6 +29,9 @@ def page_name(path: str) -> str:
     path = path.split("#")[0]
     if path in ("", "/"):
         return "inicio.html"
+    match = re.fullmatch(r"/\?v=(\d+)", path)
+    if match:
+        return "inicio.html" if match.group(1) == "0" else f"inicio-{match.group(1)}.html"
     match = re.fullmatch(r"/cuadro/(\d+)(?:\?servicio=(\w+))?", path)
     if match:
         index, service = match.groups()
@@ -62,18 +65,20 @@ def main(out: Path) -> None:
     state.today_override = MEETING_DAY
 
     client.post("/generar")
-    client.post("/publicar/0")
     problem = state.problem
-    services = [s["id"] for s in state.clinic.raw["services"]]
 
-    pages = ["/", "/clinica", "/equipo", "/generar", "/comparar", "/publicado"]
-    for i in range(len(state.proposals)):
-        pages.append(f"/cuadro/{i}")
-        pages += [f"/cuadro/{i}?servicio={s}" for s in services]
-    for path in pages:
+    pages = ["/", "/clinica", "/equipo", "/generar", "/comparar"]
+    pages += [f"/?v={i}" for i in range(1, len(state.proposals))]
+
+    def save(path: str) -> None:
         html = client.get(path).get_data(as_text=True)
         index = int(path.split("/")[2].split("?")[0]) if path.startswith("/cuadro/") else None
         (out / page_name(path)).write_text(rewrite(html, index), encoding="utf-8")
+
+    for path in pages:
+        save(path)
+    client.post("/publicar/0")
+    save("/publicado")
 
     for i, proposal in enumerate(state.proposals):
         data = {

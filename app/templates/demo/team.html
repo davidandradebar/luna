@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>2. Su equipo</h1>
+<h1>Equipo y preferencias</h1>
 <p class="lead">Cada persona tiene su cargo, los servicios donde está habilitada y lo que prefiere. Las preferencias pueden llegar por WhatsApp.</p>
 
 <div class="legend">
@@ -45,7 +45,6 @@
     {% if static_export %}<p class="static-note">En la versión en vivo aquí se agregan peticiones y entran al siguiente cuadro.</p>{% else %}<button class="btn">Agregar</button>{% endif %}
   </form>
 </div>
-<div class="next"><a class="btn primary" href="{{ url_for('demo.generate') }}">Siguiente: generar →</a></div>
 {% endblock %}
 {% block scripts %}
 <script>

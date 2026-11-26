@@ -19,6 +19,7 @@ from flask import (
 from app.demo.export import build_workbook
 from app.demo.state import get_state, reset_state
 from app.demo.whatsapp import reply
+from engine.checks import legal_alerts
 from engine.cost import roster_cost
 from engine.explain import explain
 from engine.metrics import coverage_gaps, fairness, preference_rate, preference_results
@@ -70,6 +71,38 @@ def _summary(index: int) -> dict:
         "unmet": [r for r in results if not r.fulfilled],
         "fairness": [f for f in fairness(problem, proposal) if f.nights_max or f.holidays_max],
         "gaps": coverage_gaps(problem, proposal),
+        "alerts": legal_alerts(problem, proposal),
+    }
+
+
+def _grid(index: int) -> dict:
+    state = get_state()
+    problem = state.problem
+    proposal = state.proposals[index]
+    days = [
+        {
+            "index": d,
+            "number": d + 1,
+            "weekday": problem.weekday_of(d),
+            "holiday": problem.is_sunday_or_holiday(d),
+        }
+        for d in range(problem.days)
+    ]
+    rows = []
+    for e in problem.employees:
+        mine = proposal.for_employee(e.id)
+        rows.append(
+            {
+                "employee": e,
+                "services": sorted({a.service for a in mine}),
+                "hours": sum(problem.shift(a.shift_code).hours for a in mine),
+            }
+        )
+    return {
+        "grid": {(a.employee_id, a.day): a for a in proposal.assignments},
+        "rows": rows,
+        "days": days,
+        "absences": {(u.employee_id, u.day) for u in problem.unavailability if u.shift_code is None},
     }
 
 
@@ -83,16 +116,20 @@ def _require_proposals():
 @bp.get("/")
 def home():
     state = get_state()
-    problem = state.clinic.problem()
-    slots = sum(c.minimum for c in problem.coverage)
-    stats = {
+    problem = state.problem or state.clinic.problem()
+    context = {
+        "slots": sum(c.minimum for c in problem.coverage),
         "people": len(problem.employees),
-        "services": len(state.clinic.raw["services"]),
-        "slots": slots,
         "preferences": len(problem.preferences),
-        "rules": 4 + len(problem.forbidden_sequences),
     }
-    return render_template("demo/home.html", stats=stats, step=0)
+    if state.proposals:
+        default = state.selected if state.selected is not None else 0
+        index = request.args.get("v", default, type=int)
+        if not 0 <= index < len(state.proposals):
+            index = 0
+        context |= {"summary": _summary(index), **_grid(index)}
+        context["versions"] = [_summary(i) for i in range(len(state.proposals))]
+    return render_template("demo/home.html", **context)
 
 
 @bp.route("/clinica", methods=["GET", "POST"])
@@ -169,7 +206,7 @@ def generate():
         if not state.proposals:
             flash("Con las reglas actuales no existe un cuadro posible. Revise reglas o personal.")
             return redirect(url_for("demo.generate"))
-        return redirect(url_for("demo.compare"))
+        return redirect(url_for("demo.home"))
     problem = state.clinic.problem()
     return render_template(
         "demo/generate.html",
@@ -289,7 +326,7 @@ def apply_replacement():
     state.apply_replacement(affected, request.form["replacement_id"])
     flash("Reemplazo aplicado. El cuadro quedó ajustado y se notificó por WhatsApp (simulado).")
     index = state.selected if state.selected is not None else 0
-    return redirect(url_for("demo.roster", index=index))
+    return redirect(url_for("demo.home", v=index))
 
 
 @bp.get("/whatsapp")

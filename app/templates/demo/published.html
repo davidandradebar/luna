@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>5. Publicado</h1>
+<h1>Cuadro publicado</h1>
 <p class="lead">Usted aprobó la propuesta <b>{{ state.chosen.strategy.label }}</b>. LUNA nunca publica sin la aprobación del coordinador.</p>
 <div class="cards two">
   <div class="card">
@@ -13,7 +13,7 @@
       <li>Al cierre del mes, las horas salen clasificadas para nómina</li>
     </ul>
     <div class="actions">
-      <a class="btn" href="{{ url_for('demo.roster', index=state.selected) }}">Ver cuadro publicado</a>
+      <a class="btn" href="{{ url_for('demo.home') }}">Ver cuadro publicado</a>
       {% if not static_export %}<a class="btn" href="{{ url_for('demo.export', index=state.selected) }}">Exportar a Excel</a>{% endif %}
     </div>
   </div>

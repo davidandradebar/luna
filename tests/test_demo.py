@@ -6,7 +6,7 @@ from app import create_app
 from app.config import TestConfig
 from app.demo.data import ClinicData
 from app.demo.state import reset_state
-from engine.checks import blocking_reasons, suggest_replacements
+from engine.checks import blocking_reasons, legal_alerts, suggest_replacements
 from engine.cost import classify_hours, roster_cost
 from engine.explain import explain
 from engine.metrics import coverage_gaps, preference_rate, preference_results
@@ -40,6 +40,12 @@ def test_three_proposals_with_full_coverage(solved):
     for proposal in proposals:
         assert coverage_gaps(problem, proposal) == []
         assert 0 <= preference_rate(preference_results(problem, proposal)) <= 1
+
+
+def test_generated_rosters_have_no_legal_alerts(solved):
+    problem, proposals = solved
+    for proposal in proposals:
+        assert legal_alerts(problem, proposal) == []
 
 
 def test_cost_strategy_is_cheapest(solved):
@@ -79,6 +85,9 @@ def test_guided_flow_end_to_end():
     for url in ("/", "/clinica", "/equipo", "/generar", "/whatsapp"):
         assert client.get(url).status_code == 200
     assert client.post("/generar").status_code == 302
+    home = client.get("/").get_data(as_text=True)
+    assert "Alertas legales" in home and "Aprobar y publicar" in home
+    assert client.get("/?v=2").status_code == 200
     assert client.get("/comparar").status_code == 200
     assert client.get("/cuadro/0").status_code == 200
     assert client.get("/api/explicar/0/EMP-001/0").get_json()["lines"]
