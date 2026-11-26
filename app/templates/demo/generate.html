@@ -25,14 +25,18 @@
     </ul>
   </div>
 </div>
-<form method="post" class="center" id="gen-form">
+{% if static_export %}
+<div class="center"><a class="btn primary big" href="{{ url_for('demo.compare') }}">Generar 3 propuestas</a>
+  <p class="muted small">En esta vista de consulta se muestran cuadros ya generados por el motor.</p></div>
+{% endif %}
+<form method="post" class="center" id="gen-form" {{ 'hidden' if static_export }}>
   <button class="btn primary big" id="gen-btn">Generar 3 propuestas</button>
   <p class="muted" id="gen-wait" hidden>LUNA está armando los cuadros… toma unos segundos.</p>
 </form>
 {% endblock %}
 {% block scripts %}
 <script>
-  document.getElementById('gen-form').addEventListener('submit', () => {
+  document.getElementById('gen-form')?.addEventListener('submit', () => {
     document.getElementById('gen-btn').disabled = true;
     document.getElementById('gen-wait').hidden = false;
   });

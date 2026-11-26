@@ -26,6 +26,7 @@ class DemoState:
     log: list[str] = field(default_factory=list)
     chats: dict[str, list[dict]] = field(default_factory=dict)
     lock: threading.Lock = field(default_factory=threading.Lock)
+    today_override: date | None = None
 
     def generate(self, time_limit_s: float) -> None:
         with self.lock:
@@ -49,6 +50,8 @@ class DemoState:
         self.log.append("Cuadro aprobado y publicado por el coordinador.")
 
     def today(self) -> date:
+        if self.today_override:
+            return self.today_override
         today = date.today()
         start = self.clinic.start
         if today.year == start.year and today.month == start.month:

@@ -29,6 +29,14 @@ bp = Blueprint("demo", __name__)
 WEEKDAY_SHORT = ["L", "M", "X", "J", "V", "S", "D"]
 WEEKDAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 ABSENCE_KINDS = ["Incapacidad", "Calamidad doméstica", "Licencia", "Permiso"]
+WHATSAPP_SUGGESTIONS = [
+    "¿Qué turno tengo el viernes?",
+    "¿Cuántas horas llevo?",
+    "Necesito libre el 20",
+    "Prefiero las noches",
+    "Quiero cambiar mi turno del 12 con Carlos",
+    "Tengo incapacidad, no puedo ir mañana",
+]
 
 
 @bp.app_template_filter("cop")
@@ -44,6 +52,7 @@ def inject_globals():
         "state": state,
         "weekday_short": WEEKDAY_SHORT,
         "weekday_names": WEEKDAY_NAMES,
+        "static_export": current_app.config.get("STATIC_EXPORT", False),
     }
 
 
@@ -285,7 +294,7 @@ def apply_replacement():
 
 @bp.get("/whatsapp")
 def whatsapp():
-    return render_template("demo/whatsapp.html", step=7)
+    return render_template("demo/whatsapp.html", step=7, suggestions=WHATSAPP_SUGGESTIONS)
 
 
 @bp.post("/api/whatsapp")

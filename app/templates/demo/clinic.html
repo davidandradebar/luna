@@ -52,7 +52,7 @@
       <label>{{ policy.max_weekly_hours.label }}
         <input type="number" name="max_weekly_hours" min="12" max="66" value="{{ clinic.policy.max_weekly_hours }}"></label>
       <label class="check"><input type="checkbox" name="rest_after_night" {{ 'checked' if clinic.policy.rest_after_night }}> {{ policy.rest_after_night.label }}</label>
-      <button class="btn">Guardar reglas</button>
+      {% if static_export %}<p class="static-note">En la versión en vivo estas reglas se editan y el cuadro se vuelve a generar.</p>{% else %}<button class="btn">Guardar reglas</button>{% endif %}
     </form>
   </div>
 </div>

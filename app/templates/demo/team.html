@@ -42,7 +42,7 @@
     <input type="date" name="day" data-kind="day_off" min="{{ clinic.start.isoformat() }}" max="{{ clinic.date_of(clinic.days - 1).isoformat() }}" value="{{ clinic.date_of(19).isoformat() }}">
     <select name="shift_code" data-kind="prefer_shift" hidden>{% for t in clinic.raw.shift_types %}<option value="{{ t.code }}">{{ t.label }}</option>{% endfor %}</select>
     <select name="weekday" data-kind="avoid_weekday" hidden>{% for d in weekday_names %}<option value="{{ loop.index0 }}">{{ d }}</option>{% endfor %}</select>
-    <button class="btn">Agregar</button>
+    {% if static_export %}<p class="static-note">En la versión en vivo aquí se agregan peticiones y entran al siguiente cuadro.</p>{% else %}<button class="btn">Agregar</button>{% endif %}
   </form>
 </div>
 <div class="next"><a class="btn primary" href="{{ url_for('demo.generate') }}">Siguiente: generar →</a></div>

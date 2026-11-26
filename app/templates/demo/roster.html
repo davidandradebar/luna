@@ -5,9 +5,9 @@
   <h1>Cuadro: {{ p.strategy.label }}
     {% if state.selected == summary.index %}<span class="badge">{{ state.status }}</span>{% else %}<span class="badge muted">borrador</span>{% endif %}</h1>
   <div class="actions">
-    <a class="btn" href="{{ url_for('demo.export', index=summary.index) }}">Exportar a Excel</a>
+    {% if not static_export %}<a class="btn" href="{{ url_for('demo.export', index=summary.index) }}">Exportar a Excel</a>{% endif %}
     {% if state.selected != summary.index %}
-    <form method="post" action="{{ url_for('demo.publish', index=summary.index) }}"><button class="btn primary">Elegir y publicar</button></form>
+    {% if static_export %}<a class="btn primary" href="{{ url_for('demo.published') }}">Elegir y publicar</a>{% else %}<form method="post" action="{{ url_for('demo.publish', index=summary.index) }}"><button class="btn primary">Elegir y publicar</button></form>{% endif %}
     {% endif %}
   </div>
 </div>
@@ -65,8 +65,13 @@
 <script>
   const dlg = document.getElementById('why');
   document.querySelectorAll('td.cell').forEach(td => td.addEventListener('click', async () => {
+    {% if static_export %}
+    window.LUNA_EXPLAIN = window.LUNA_EXPLAIN || await (await fetch('explicaciones-{{ summary.index }}.json')).json();
+    const data = window.LUNA_EXPLAIN[`${td.dataset.emp}/${td.dataset.day}`];
+    {% else %}
     const r = await fetch(`/api/explicar/{{ summary.index }}/${td.dataset.emp}/${td.dataset.day}`);
     const data = await r.json();
+    {% endif %}
     document.getElementById('why-date').textContent = data.date;
     document.getElementById('why-name').textContent = data.employee;
     document.getElementById('why-title').textContent = data.title;

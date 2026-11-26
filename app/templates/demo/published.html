@@ -14,7 +14,7 @@
     </ul>
     <div class="actions">
       <a class="btn" href="{{ url_for('demo.roster', index=state.selected) }}">Ver cuadro publicado</a>
-      <a class="btn" href="{{ url_for('demo.export', index=state.selected) }}">Exportar a Excel</a>
+      {% if not static_export %}<a class="btn" href="{{ url_for('demo.export', index=state.selected) }}">Exportar a Excel</a>{% endif %}
     </div>
   </div>
   <div class="phone small-phone">

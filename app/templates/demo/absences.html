@@ -2,12 +2,13 @@
 {% block content %}
 <h1>Novedades</h1>
 <p class="lead">Alguien se incapacita a última hora. LUNA busca quién puede cubrir sin romper ninguna regla.</p>
+{% if static_export %}<p class="static-note">Ejemplo ya registrado. En la versión en vivo se elige persona, día y tipo de novedad.</p>{% endif %}
 <div class="card">
   <form method="post" class="form row">
     <select name="employee_id">{% for e in state.problem.employees %}<option value="{{ e.id }}">{{ e.display_name }} · {{ clinic.role_label(e.role) }}</option>{% endfor %}</select>
     <label>Día <input type="number" name="day" min="1" max="{{ clinic.days }}" value="{{ state.today().day }}"></label>
     <select name="kind">{% for k in kinds %}<option>{{ k }}</option>{% endfor %}</select>
-    <button class="btn primary">Registrar novedad</button>
+    {% if not static_export %}<button class="btn primary">Registrar novedad</button>{% endif %}
   </form>
 </div>
 
@@ -31,7 +32,7 @@
         <input type="hidden" name="shift_code" value="{{ affected.shift_code }}">
         <input type="hidden" name="service" value="{{ affected.service }}">
         <input type="hidden" name="replacement_id" value="{{ o.employee_id }}">
-        <button class="btn primary">Asignar</button></form></td>
+        {% if not static_export %}<button class="btn primary">Asignar</button>{% endif %}</form></td>
     </tr>
     {% endfor %}
     </tbody>

@@ -4,11 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}LUNA · Cuadro de turnos{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,800;1,400&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', filename='luna.css') }}">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="{{ url_for('demo.home') }}"><span class="moon">☾</span> LUNA</a>
+    <a class="brand" href="{{ url_for('demo.home') }}"><span class="moon brand-mark">☾</span> LUNA</a>
+    <span class="byline">un producto de</span>
+    <img class="joint-logo" src="{{ url_for('static', filename='img/logo_joint_blanco.png') }}" alt="Joint Solutions">
     <span class="tenant">{{ clinic.raw.tenant.name }} · {{ clinic.raw.period.label }}</span>
     <nav class="extras">
       <a href="{{ url_for('demo.absences') }}" class="{{ 'active' if step == 6 }}">Novedades</a>
@@ -30,8 +34,8 @@
     {% block content %}{% endblock %}
   </main>
   <footer class="footer">
-    Demo con datos ficticios · Valores legales por verificar ·
-    <form method="post" action="{{ url_for('demo.restart') }}" class="inline"><button class="link">Reiniciar demo</button></form>
+    LUNA es un producto de Joint Solutions · <span class="tagline">Soluciones Efectivas</span> · Demo con datos ficticios · Valores legales por verificar ·
+    {% if not static_export %}<form method="post" action="{{ url_for('demo.restart') }}" class="inline"><button class="link">Reiniciar demo</button></form>{% endif %}
   </footer>
   {% block scripts %}{% endblock %}
 </body>

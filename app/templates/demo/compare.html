@@ -31,7 +31,7 @@
     {% else %}<p class="good small">Se cumplieron todas las preferencias.</p>{% endif %}
     <div class="actions">
       <a class="btn" href="{{ url_for('demo.roster', index=s.index) }}">Ver cuadro</a>
-      <form method="post" action="{{ url_for('demo.publish', index=s.index) }}"><button class="btn primary">Elegir y publicar</button></form>
+      {% if static_export %}<a class="btn primary" href="{{ url_for('demo.published') }}">Elegir y publicar</a>{% else %}<form method="post" action="{{ url_for('demo.publish', index=s.index) }}"><button class="btn primary">Elegir y publicar</button></form>{% endif %}
     </div>
   </div>
   {% endfor %}
