@@ -5,14 +5,11 @@
 <div class="wa-layout">
   <div class="card">
     <label>Escribir como
-      <select id="wa-emp">{% for e in clinic.raw.employees %}<option value="{{ e.id }}">{{ e.name }}</option>{% endfor %}</select>
+      <select id="wa-emp">{% for e in clinic.raw.employees %}<option value="{{ e.id }}" {{ 'selected' if e.id == default_emp }}>{{ e.name }} · {{ clinic.role_label(e.role) }}</option>{% endfor %}</select>
     </label>
-    <p class="muted small">Pruebe:</p>
-    <div class="suggestions">
-      {% for s in suggestions %}
-      <button class="chip" type="button">{{ s }}</button>
-      {% endfor %}
-    </div>
+    <p class="muted small">Mensajes de ejemplo para esta persona:</p>
+    <div class="suggestions" id="wa-chips"></div>
+    {% if not state.chosen %}<p class="small warn-text">Primero apruebe y publique un cuadro: el equipo solo consulta el cuadro publicado.</p>{% endif %}
   </div>
   <div class="phone">
     <div class="phone-head">LUNA · Turnos</div>
@@ -39,7 +36,15 @@
     {% endif %}
   };
   document.getElementById('wa-form').addEventListener('submit', e => { e.preventDefault(); const i = document.getElementById('wa-text'); send(i.value); i.value = ''; });
-  document.querySelectorAll('.suggestions .chip').forEach(b => b.addEventListener('click', () => send(b.textContent)));
-  document.getElementById('wa-emp').addEventListener('change', () => { chat.innerHTML = '<div class="msg bot">Hola, soy LUNA. ¿En qué te ayudo?</div>'; });
+  const EXAMPLES = {{ examples|tojson }};
+  const chips = () => {
+    const box = document.getElementById('wa-chips'); box.innerHTML = '';
+    (EXAMPLES[document.getElementById('wa-emp').value] || []).forEach(text => {
+      const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.textContent = text;
+      b.addEventListener('click', () => send(text)); box.appendChild(b);
+    });
+  };
+  document.getElementById('wa-emp').addEventListener('change', () => { chat.innerHTML = '<div class="msg bot">Hola, soy LUNA. ¿En qué te ayudo?</div>'; chips(); });
+  chips();
 </script>
 {% endblock %}

@@ -25,13 +25,14 @@
       <dd>{% if s.gaps %}<span class="warn-text">{{ s.gaps|length }} turnos sin cubrir</span>{% else %}<span class="good">100% cubierta</span>{% endif %}</dd>
     </dl>
     {% if s.unmet %}
-    <details><summary>No se cumplió a {{ s.unmet|length }} persona(s)</summary>
+    <details><summary>No se cumplió del todo a {{ s.unmet|length }} {{ 'persona' if s.unmet|length == 1 else 'personas' }}</summary>
       <ul class="small">{% for r in s.unmet %}<li>{{ clinic.employee_name(r.preference.employee_id) }}: {{ r.preference.note }} ({{ r.detail }})</li>{% endfor %}</ul>
     </details>
     {% else %}<p class="good small">Se cumplieron todas las preferencias.</p>{% endif %}
     <div class="actions">
       <a class="btn" href="{{ url_for('demo.home', v=s.index) }}">Ver cuadro</a>
-      {% if static_export %}<a class="btn primary" href="{{ url_for('demo.published') }}">Elegir y publicar</a>{% else %}<form method="post" action="{{ url_for('demo.publish', index=s.index) }}"><button class="btn primary">Elegir y publicar</button></form>{% endif %}
+      {% set kind = 'primary' if s.proposal.strategy.key == 'balanced' else '' %}
+      {% if static_export %}<a class="btn {{ kind }}" href="{{ url_for('demo.published') }}">Elegir y publicar</a>{% else %}<form method="post" action="{{ url_for('demo.publish', index=s.index) }}"><button class="btn {{ kind }}">Elegir y publicar</button></form>{% endif %}
     </div>
   </div>
   {% endfor %}

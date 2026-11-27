@@ -12,10 +12,10 @@ from pathlib import Path
 
 from app import create_app
 from app.config import Config
-from app.demo.requests import absence_request
+from app.demo.requests import pending_absences
 from app.demo.state import get_state, reset_state
 from app.demo.whatsapp import reply
-from app.routes.demo import WEEKDAY_NAMES, WHATSAPP_SUGGESTIONS
+from app.routes.demo import WEEKDAY_NAMES, whatsapp_examples
 from engine.explain import explain
 
 MEETING_DAY = date(2026, 12, 3)
@@ -93,17 +93,17 @@ def main(out: Path) -> None:
         }
         (out / f"explicaciones-{i}.json").write_text(json.dumps(data, ensure_ascii=False))
 
-    pending = absence_request(state, 0)
-    example = {"employee_id": pending["employee_id"], "day": pending["day"] + 1, "kind": "Incapacidad"}
-    html = client.post("/novedades", data=example).get_data(as_text=True)
-    (out / "novedades.html").write_text(rewrite(html), encoding="utf-8")
+    pending = pending_absences(state, 0)[0]
+    html = client.get(f"/novedades?emp={pending['employee_id']}&dia={pending['day'] + 1}&v=0")
+    (out / "novedades.html").write_text(rewrite(html.get_data(as_text=True)), encoding="utf-8")
 
+    examples, _ = whatsapp_examples(state)
     (out / "whatsapp.html").write_text(
         rewrite(client.get("/whatsapp").get_data(as_text=True)), encoding="utf-8"
     )
     replies = {e.id: {} for e in problem.employees}
     for e in problem.employees:
-        for text in WHATSAPP_SUGGESTIONS:
+        for text in examples[e.id]:
             replies[e.id][text] = reply(state, e.id, text)
     (out / "whatsapp.json").write_text(json.dumps(replies, ensure_ascii=False))
 

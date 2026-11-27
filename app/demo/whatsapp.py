@@ -1,10 +1,13 @@
 """Simulación del canal de WhatsApp para la demo."""
 
+import re
+
 from app.demo.state import DemoState
 from bot.intents import Intent
 from bot.parser import parse_message
-from engine.checks import blocking_reasons, suggest_replacements
+from engine.checks import blocking_reasons, check_swap, suggest_replacements
 from engine.cost import classify_hours
+from engine.explain import explain
 from engine.models import Preference, PreferenceKind
 
 WEEKDAYS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
@@ -36,6 +39,8 @@ def reply(state: DemoState, employee_id: str, text: str) -> str:
     first_name = clinic.employee_name(employee_id).split()[0]
 
     if parsed.intent is None:
+        if re.search(r"gracias|listo|ok\b|vale|perfecto", text.lower()):
+            return f"Con gusto, {first_name}. Aquí estoy si necesitas algo más."
         return f"Hola {first_name}, soy LUNA. {HELP}"
 
     day = clinic.day_index(parsed.day) if parsed.day else None
@@ -52,14 +57,45 @@ def reply(state: DemoState, employee_id: str, text: str) -> str:
         )
 
     if parsed.intent == Intent.REGISTER_PREFERENCE:
+        avoid = parsed.extra.get("avoid", False)
         if parsed.shift_code:
             value, label = parsed.shift_code, clinic.shift_plural(parsed.shift_code)
-            kind, note = PreferenceKind.PREFER_SHIFT, f"Prefiere {label} (por WhatsApp)"
-        else:
+            if avoid:
+                kind, note, said = (
+                    PreferenceKind.AVOID_SHIFT,
+                    f"Evitar {label}",
+                    f"prefieres evitar las {label}",
+                )
+            else:
+                kind, note, said = PreferenceKind.PREFER_SHIFT, f"Prefiere {label}", f"prefieres las {label}"
+        elif avoid:
+            day_name = WEEKDAYS[parsed.weekday]
             value, kind = parsed.weekday, PreferenceKind.AVOID_WEEKDAY
-            note = f"Evitar {WEEKDAYS[parsed.weekday]} (por WhatsApp)"
-        clinic.extra_preferences.append(Preference(employee_id, kind, value, 2, note))
-        return f"Anotado: {note.split(' (')[0].lower()}. Es una preferencia, no una garantía."
+            note, said = f"Evitar {day_name}s", f"prefieres no trabajar los {day_name}s"
+        else:
+            return (
+                f"Gracias, {first_name}. Los {WEEKDAYS[parsed.weekday]}s no te los voy a evitar; "
+                "si quieres pedir un día libre, escríbeme «Necesito libre el 20»."
+            )
+        prefs = clinic.extra_preferences
+        prefs[:] = [p for p in prefs if not (p.employee_id == employee_id and p.value == value)]
+        prefs.append(Preference(employee_id, kind, value, 2, f"{note} (por WhatsApp)"))
+        return (
+            f"Anotado, {first_name}: {said}. Lo tendré en cuenta en el próximo cuadro; "
+            "es una preferencia, no una garantía."
+        )
+
+    if parsed.intent == Intent.REPORT_ABSENCE:
+        index = state.selected if state.selected is not None else 0
+        affected, _ = state.register_absence(employee_id, day, "Incapacidad", index, source="WhatsApp")
+        if affected is None:
+            return (
+                f"Registré tu novedad para el {_fmt(state, day)}. Ese día no tenías turno. ¡Que te mejores!"
+            )
+        return (
+            f"Registré tu incapacidad para el {_fmt(state, day)}. Tu coordinador ya la ve y LUNA le "
+            "propone quién puede cubrirte. ¡Que te mejores!"
+        )
 
     if proposal is None or problem is None:
         return "El cuadro de este mes todavía no está publicado. Te aviso apenas salga."
@@ -74,6 +110,14 @@ def reply(state: DemoState, employee_id: str, text: str) -> str:
             f"en {clinic.service_label(a.service)}."
         )
 
+    if parsed.intent == Intent.EXPLAIN_SHIFT:
+        a = proposal.at(employee_id, day)
+        if a is None:
+            return f"El {_fmt(state, day)} no tienes turno."
+        why = explain(problem, proposal, employee_id, day)
+        reasons = "\n".join(f"• {line}" for line in why["lines"])
+        return f"Tu turno del {_fmt(state, day)} ({why['title'].lower()}):\n{reasons}"
+
     if parsed.intent == Intent.QUERY_HOURS:
         mine = proposal.for_employee(employee_id)
         hours = [classify_hours(problem, a) for a in mine]
@@ -83,16 +127,6 @@ def reply(state: DemoState, employee_id: str, text: str) -> str:
         return (
             f"Este mes tienes {len(mine)} turnos y {total} horas: {night} nocturnas y "
             f"{holiday} en domingo o festivo."
-        )
-
-    if parsed.intent == Intent.REPORT_ABSENCE:
-        affected, options = state.register_absence(employee_id, day, "Incapacidad (reportada por WhatsApp)")
-        if affected is None:
-            return f"Registré tu novedad para el {_fmt(state, day)}. Ese día no tenías turno."
-        names = ", ".join(clinic.employee_name(o.employee_id) for o in options[:3]) or "nadie disponible"
-        return (
-            f"Registré tu novedad para el {_fmt(state, day)}. Ya avisé a tu coordinador con "
-            f"opciones de reemplazo ({names}). ¡Que te mejores!"
         )
 
     if parsed.intent == Intent.REQUEST_SWAP:
@@ -123,15 +157,60 @@ def reply(state: DemoState, employee_id: str, text: str) -> str:
             alt = ", ".join(clinic.employee_name(o.employee_id) for o in options)
             hint = f" Quienes sí pueden tomarlo: {alt}." if alt else ""
             return f"No se puede con {parsed.other_name}: {reason}.{hint}"
-        trade = (
-            f"tú tomas su {problem.shift(theirs.shift_code).label.lower()} y {parsed.other_name} tu "
-            f"{problem.shift(mine.shift_code).label.lower()}"
-            if theirs
-            else f"{parsed.other_name} toma tu turno"
-        )
+        if theirs is None:
+            trade = f"{parsed.other_name} toma tu turno"
+        elif theirs.shift_code == mine.shift_code:
+            trade = (
+                f"tú vas a {clinic.service_label(theirs.service)} y {parsed.other_name} a "
+                f"{clinic.service_label(mine.service)}, en el mismo horario"
+            )
+        else:
+            trade = (
+                f"tú tomas su {problem.shift(theirs.shift_code).label.lower()} y {parsed.other_name} tu "
+                f"{problem.shift(mine.shift_code).label.lower()}"
+            )
         return (
             f"Validado para el {_fmt(state, day)}: {trade}, sin romper ninguna regla ni dejar el "
             "servicio descubierto. Le pregunté si acepta; después tu jefe lo aprueba con un clic."
         )
 
     return HELP
+
+
+def suggestions_for(state: DemoState, employee_id: str) -> list[str] | None:
+    """Mensajes de ejemplo que funcionan para esta persona con el cuadro actual, o None si alguno no."""
+    proposal, problem = state.proposal(None), state.problem
+    if proposal is None or problem is None:
+        return None
+    today = state.clinic.day_index(state.today())
+    days = range(today, problem.days)
+    week = [d for d in days if d < today + 7 and d > today and proposal.at(employee_id, d)]
+    tomorrow = proposal.at(employee_id, today + 1) if today + 1 < problem.days else None
+    night = next((d for d in days if (a := proposal.at(employee_id, d)) and a.shift_code == "N"), None)
+    role = problem.employee(employee_id).role
+    swap = None
+    for d in days:
+        if d <= today + 1 or proposal.at(employee_id, d) is None:
+            continue
+        for e in problem.employees:
+            if e.role != role or e.id == employee_id:
+                continue
+            check = check_swap(problem, proposal, employee_id, e.id, d)
+            if check.valid and check.theirs is None:
+                swap = (d, e.display_name.split()[0])
+                break
+        if swap:
+            break
+    if not (week and tomorrow and night is not None and swap):
+        return None
+    free = next((d for d in days if d > today + 7 and proposal.at(employee_id, d) is None), 20)
+    weekday = WEEKDAYS[state.clinic.date_of(week[0]).weekday()]
+    return [
+        f"¿Qué turno tengo el {weekday}?",
+        f"¿Por qué me tocó la noche del {night + 1}?",
+        "¿Cuántas horas llevo?",
+        f"Necesito libre el {free + 1}",
+        "No me gustan las noches",
+        f"Quiero cambiar mi turno del {swap[0] + 1} con {swap[1]}",
+        "Tengo incapacidad, no puedo ir mañana",
+    ]

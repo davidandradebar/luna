@@ -1,4 +1,4 @@
-# Guion de la demo (20 minutos)
+# Guion de la demo (10 minutos)
 
 Demo con una clínica ficticia ("Clínica Demo") de salud mental: hospitalización de agudos e intermedios, 25 personas (auxiliares de enfermería, enfermeras jefe, psiquiatras, psicólogos y terapeuta ocupacional), turnos de mañana, tarde y noche, diciembre 2026 con festivos del 8 y el 25.
 
@@ -6,27 +6,29 @@ Demo con una clínica ficticia ("Clínica Demo") de salud mental: hospitalizaci�
 
 ```bash
 pip install -r requirements.txt
-flask --app wsgi run          # abrir http://localhost:5000
+LUNA_DEMO_DATE=2026-12-03 flask --app wsgi run   # abrir http://localhost:5000
 ```
 
-- Generar una vez antes de entrar para confirmar que todo corre (toma unos 8 segundos).
-- Pulsar **Reiniciar demo** (pie de página) para empezar limpio.
-- Sin internet también funciona: todo corre en el portátil.
+- Presentar desde esta versión local, no desde el enlace de consulta: ahí aprobar, registrar novedades y escribir libre por WhatsApp no guardan cambios.
+- `LUNA_DEMO_DATE` fija el "hoy" del tablero en el día de la reunión (si falta, usa la fecha real dentro de diciembre o el 1 de diciembre).
+- Generar una vez antes de entrar para confirmar que todo corre (unos 8 segundos) y luego pulsar **Reiniciar demo** (pie de página).
+- Las cifras cambian un poco entre una generación y otra: no citar números exactos de memoria, leerlos de la pantalla.
+- Funciona sin internet: todo corre en el portátil.
 
 ## Recorrido
 
-| Paso | Qué mostrar | Mensaje clave |
+| Minuto | Qué mostrar | Mensaje clave |
 |---|---|---|
-| Inicio | Los números: personas, turnos por cubrir, preferencias, reglas | "Esto es lo que hoy su coordinador cuadra a mano cada mes." |
-| 1. Su clínica | Servicios, personal mínimo por turno, reglas de ley y de la clínica | "LUNA se adapta a ustedes. Si quieren máximo 2 noches seguidas, se cambia aquí." |
-| 2. Su equipo | Habilitaciones, preferencias, prioridad por equidad. Agregar una petición en vivo | "Cada persona dice qué prefiere. Quien el mes pasado salió perdiendo, este mes va primero." |
-| 3. Generar | Botón y espera de unos segundos | "LUNA nunca rompe una regla; lo que negocia son las preferencias." |
-| 4. Comparar | Tres versiones: costo, % de preferencias, reparto de noches | "Usted decide: más barato, más contento el equipo, o equilibrado. Y sabe el costo antes de la nómina." |
-| Cuadro | Calendario por servicio. Tocar un turno → "¿por qué me tocó esto?" | "Cada turno tiene una explicación. Se acaban las discusiones de pasillo." |
-| 5. Publicar | Aprobación del coordinador y mensaje de WhatsApp | "LUNA propone, usted aprueba. Nunca publica sola." |
-| Novedades | Incapacidad de último minuto → reemplazos legales → asignar | "En segundos sabe quién puede cubrir sin pasarse de horas ni quitarle el descanso." |
-| WhatsApp | Preguntar turno, horas, pedir libre, pedir cambio | "El equipo no instala nada. El cambio de turno se valida solo y el jefe aprueba con un clic." |
-| Excel | Exportar: cuadro, horas para nómina, resumen | "No tienen que dejar Excel; LUNA les entrega el cuadro y las horas listas para nómina." |
+| 0–1 | Inicio vacío: LUNA cuenta cuántas personas, turnos y preferencias hay | "Esto es lo que hoy su coordinación cuadra a mano cada mes." |
+| 1–2 | **Generar cuadro** (las frases de espera muestran lo que está revisando) | "LUNA nunca rompe una regla; lo que negocia son las preferencias." |
+| 2–4 | La frase de LUNA y las 3 versiones: costo, % de preferencias y noches por auxiliar | "Menor costo ahorra poco y carga de noches a unos pocos. Usted decide qué priorizar." |
+| 4–5 | Pulso del hospital: quién está ahora, de día y de noche, en cada servicio. Tocar un día del mes | "Así se ve el hospital las 24 horas, cualquier día del mes." |
+| 5–6 | Tocar una persona del Pulso: **¿por qué le tocó?** | "Cada turno tiene una explicación. Se acaban las discusiones de pasillo." |
+| 6–7 | **Aprobar y publicar**: avisos por WhatsApp | "LUNA propone, usted aprueba. Nunca publica sola." |
+| 7–9 | Para revisar: cambio válido (Aprobar), cambio rechazado (Avisar que no se puede) e incapacidad (Ver reemplazos → Asignar) | "En segundos sabe quién puede cubrir sin pasarse de horas ni quitarle el descanso." |
+| 9–10 | Mensajes: escribir como la persona sugerida y usar los ejemplos | "El equipo no instala nada. Pregunta, pide y avisa por WhatsApp." |
+
+Reglas, Equipo y Excel solo si preguntan. Si quieren ver que LUNA se adapta: en Reglas, bajar "días seguidos" a un valor imposible y generar; LUNA dice qué regla lo impide y conserva las versiones anteriores.
 
 ## Preguntas para hacerles
 

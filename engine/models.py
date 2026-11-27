@@ -5,6 +5,7 @@ from enum import StrEnum
 
 class PreferenceKind(StrEnum):
     PREFER_SHIFT = "prefer_shift"  # "prefiero noches"
+    AVOID_SHIFT = "avoid_shift"  # "no me gustan las noches"
     AVOID_WEEKDAY = "avoid_weekday"  # "evitar domingos"
     DAY_OFF = "day_off"  # "libre el 15"
 

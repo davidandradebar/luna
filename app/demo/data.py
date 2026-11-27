@@ -29,6 +29,8 @@ class Absence:
     employee_id: str
     day: int
     kind: str  # incapacidad, calamidad, vacaciones, permiso
+    source: str = "coordinación"  # quién la reportó: coordinación o WhatsApp
+    seed: bool = False  # novedad de ejemplo que se crea al generar
 
 
 @dataclass

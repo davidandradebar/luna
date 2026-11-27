@@ -7,7 +7,6 @@ from engine.checks import SwapCheck, check_swap, suggest_replacements
 
 # Solicitudes ficticias que llegaron por WhatsApp: quién pide, con quién y desde qué día.
 SWAP_SEEDS = [("EMP-006", "auxiliar_enfermeria", 9), ("EMP-014", "enfermera_jefe", 16)]
-ABSENCE_SEEDS = [("EMP-009", 10), ("EMP-005", 10), ("EMP-002", 10)]
 
 
 @dataclass
@@ -43,15 +42,27 @@ def swap_requests(state: DemoState, index: int) -> list[SwapRequest]:
     return result
 
 
-def absence_request(state: DemoState, index: int):
-    """Una incapacidad reportada sobre un turno que sí tiene reemplazos posibles."""
+def pending_absences(state: DemoState, index: int) -> list[dict]:
+    """Novedades registradas cuya persona sigue asignada ese día en la versión que se ve."""
     problem, proposal = state.problem, state.proposals[index]
-    for employee_id, start in ABSENCE_SEEDS:
-        key = f"absence-{employee_id}"
-        if key in state.handled:
+    result = []
+    for a in sorted(state.clinic.absences, key=lambda a: a.day):
+        shift = proposal.at(a.employee_id, a.day)
+        if shift is None:
             continue
-        for day in range(start, problem.days):
-            shift = proposal.at(employee_id, day)
-            if shift and suggest_replacements(problem, proposal, shift):
-                return {"key": key, "employee_id": employee_id, "day": day}
-    return None
+        options = suggest_replacements(problem, proposal, shift)
+        result.append(
+            {
+                "employee_id": a.employee_id,
+                "day": a.day,
+                "kind": a.kind,
+                "source": a.source,
+                "shift": shift,
+                "options": len(options),
+            }  # fmt: skip
+        )
+    return result
+
+
+def pending_keys(state: DemoState, index: int) -> set[tuple[str, int]]:
+    return {(p["employee_id"], p["day"]) for p in pending_absences(state, index)}

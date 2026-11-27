@@ -23,7 +23,7 @@ def blocking_reasons(
     emp = problem.employee(employee_id)
     reasons = []
     if service not in emp.competencies:
-        reasons.append("No está habilitado(a) para este servicio")
+        reasons.append("No tiene habilitación para este servicio")
     mine = [a for a in proposal.for_employee(employee_id) if a is not ignore]
     by_day = {a.day: a for a in mine}
     if day in by_day:
@@ -88,18 +88,25 @@ def suggest_replacements(
             continue
         hours = sum(problem.shift(a.shift_code).hours for a in proposal.for_employee(emp.id))
         cost = assignment_cost(problem, Assignment(emp.id, absent.day, absent.shift_code, ""))
-        notes = ["Libre ese día", "Habilitado(a) para el servicio", "Cumple descanso y horas"]
+        notes = ["Libre ese día", "Tiene habilitación para el servicio", "Cumple descanso y horas"]
         result.append(Replacement(emp.id, hours, cost.surcharges, notes))
     result.sort(key=lambda r: (r.month_hours, r.surcharge))
     return result[:limit]
 
 
-def legal_alerts(problem: RosterProblem, proposal: RosterProposal) -> list[str]:
-    """Incumplimientos del cuadro: reglas rotas por asignación y turnos sin cubrir."""
+def legal_alerts(
+    problem: RosterProblem, proposal: RosterProposal, skip: set[tuple[str, int]] | None = None
+) -> list[str]:
+    """Incumplimientos del cuadro: reglas rotas por asignación y turnos sin cubrir.
+
+    `skip` deja fuera turnos con una novedad pendiente de reemplazo, que se muestran aparte.
+    """
     from engine.metrics import coverage_gaps
 
     alerts = []
     for a in sorted(proposal.assignments, key=lambda a: (a.day, a.employee_id)):
+        if skip and (a.employee_id, a.day) in skip:
+            continue
         reasons = blocking_reasons(problem, proposal, a.employee_id, a.day, a.shift_code, a.service, ignore=a)
         name = problem.employee(a.employee_id).display_name
         alerts += [f"Día {a.day + 1}, {name}: {r.lower()}" for r in reasons]

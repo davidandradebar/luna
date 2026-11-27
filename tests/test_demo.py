@@ -119,7 +119,7 @@ def test_valid_swap_request_can_be_approved():
     response = client.post(
         "/solicitudes/cambio",
         data={
-            "index": 0,
+            "v": 0,
             "key": valid.key,
             "requester": valid.requester,
             "other": valid.other,
@@ -129,5 +129,7 @@ def test_valid_swap_request_can_be_approved():
     assert response.status_code == 302
     assert state.proposals[0].at(valid.other, valid.day) is not None
     assert state.proposals[0].at(valid.requester, valid.day) is None
-    assert legal_alerts(state.problem, state.proposals[0]) == []
+    from app.demo.requests import pending_keys
+
+    assert legal_alerts(state.problem, state.proposals[0], skip=pending_keys(state, 0)) == []
     reset_state()

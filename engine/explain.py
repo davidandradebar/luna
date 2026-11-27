@@ -23,6 +23,11 @@ def _preference_lines(problem: RosterProblem, employee_id: str, day: int, shift_
                 f"Prefiere evitar los {WEEKDAYS[int(pref.value)]}: "
                 + ("cumplido." if ok else "esta vez le tocó.")
             )
+        elif pref.kind == PreferenceKind.AVOID_SHIFT and shift_code == pref.value:
+            lines.append(
+                f"Prefiere evitar este horario ({pref.note.lower()}); este turno se necesitaba "
+                "para completar la cobertura."
+            )
         elif pref.kind == PreferenceKind.PREFER_SHIFT and shift_code:
             if shift_code == pref.value:
                 lines.append(f"Coincide con su preferencia ({pref.note.lower()}).")
@@ -68,8 +73,9 @@ def explain(problem: RosterProblem, proposal: RosterProposal, employee_id: str, 
             None,
         )
         if need:
-            lines.append(f"El servicio necesitaba {need} persona(s) de su cargo en este turno.")
-        lines.append("Está habilitado(a) para este servicio.")
+            people = "1 persona" if need == 1 else f"{need} personas"
+            lines.append(f"El servicio necesitaba {people} de su cargo en este turno.")
+        lines.append("Tiene la formación y la habilitación para este servicio.")
         lines += _preference_lines(problem, employee_id, day, assignment.shift_code)
         others = [
             e.id

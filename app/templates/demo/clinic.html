@@ -8,7 +8,7 @@
   <div class="card">
     <h3>{{ s.name }}</h3>
     <p class="muted">{{ s.description }}</p>
-    <table class="table compact">
+    <div class="table-wrap"><table class="table compact">
       <thead><tr><th>Cargo</th>{% for t in clinic.raw.shift_types %}<th>{{ t.label }}</th>{% endfor %}<th>Días</th></tr></thead>
       <tbody>
       {% for item in coverage[s.id] %}
@@ -17,7 +17,7 @@
           <td>{{ 'Todos' if item.days == 'all' else 'Hábiles' }}</td></tr>
       {% endfor %}
       </tbody>
-    </table>
+    </table></div>
   </div>
   {% endfor %}
 </div>
@@ -33,13 +33,13 @@
   <div class="card">
     <h3>Reglas de la ley <span class="badge warn">por verificar</span></h3>
     <p class="muted">Son el piso. Vienen de una tabla con fecha de vigencia; cuando la ley cambia, se actualiza la tabla, no el sistema.</p>
-    <table class="table compact">
+    <div class="table-wrap"><table class="table compact">
       {% for label, rule, unit in legal %}
       <tr><td>{{ label }}</td>
         <td class="right"><b>{% if unit == '%' %}{{ (rule.value * 100)|round|int }}%{% elif unit == ':00' %}{{ rule.value|int }}:00{% else %}{{ rule.value|int }} {{ unit }}{% endif %}</b></td>
         <td class="muted small">{{ rule.source }}</td></tr>
       {% endfor %}
-    </table>
+    </table></div>
   </div>
   <div class="card">
     <h3>Reglas de su clínica</h3>

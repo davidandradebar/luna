@@ -132,6 +132,11 @@ class _Model:
                     v for d in range(p.days) for code, v in self.by_emp_day[emp.id, d] if code != pref.value
                 ]
                 terms.append(-weight * sum(others))
+            elif pref.kind == PreferenceKind.AVOID_SHIFT:
+                same = [
+                    v for d in range(p.days) for code, v in self.by_emp_day[emp.id, d] if code == pref.value
+                ]
+                terms.append(-weight * sum(same))
             elif pref.kind == PreferenceKind.AVOID_WEEKDAY:
                 days = [d for d in range(p.days) if p.weekday_of(d) == int(pref.value)]
                 terms.append(-weight * sum(v for d in days for v in self.worked(emp.id, d)))

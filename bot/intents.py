@@ -14,3 +14,4 @@ class Intent(StrEnum):
     REPORT_ABSENCE = "report_absence"
     QUERY_SHIFT = "query_shift"
     QUERY_HOURS = "query_hours"
+    EXPLAIN_SHIFT = "explain_shift"

@@ -31,6 +31,10 @@ def evaluate_preference(
         worked = sum(1 for a in mine if a.day in days)
         score = 1 - worked / len(days) if days else 1.0
         return PreferenceResult(pref, score, f"Trabaja {worked} de {len(days)}")
+    if pref.kind == PreferenceKind.AVOID_SHIFT:
+        worked = sum(1 for a in mine if a.shift_code == pref.value)
+        score = 1 - worked / len(mine) if mine else 1.0
+        return PreferenceResult(pref, score, f"{worked} de {len(mine)} turnos en ese horario")
     matching = sum(1 for a in mine if a.shift_code == pref.value)
     score = matching / len(mine) if mine else 0.0
     return PreferenceResult(pref, score, f"{matching} de {len(mine)} turnos")

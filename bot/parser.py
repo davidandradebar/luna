@@ -12,6 +12,8 @@ from datetime import date, timedelta
 from bot.intents import Intent
 
 WEEKDAYS = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
+# Frases que expresan rechazo: "no me gustan", "prefiero evitar", "no quiero", "prefiero no".
+NEGATIVE = r"\bno (me )?gusta|evitar|\bno quiero|prefier\w* no\b|\bodio\b|\bdetesto\b|\bsin\b"
 SHIFT_WORDS = {"noche": "N", "noches": "N", "manana": "M", "mananas": "M", "tarde": "T", "tardes": "T"}
 
 
@@ -60,6 +62,8 @@ def parse_message(text: str, today: date, names: list[str] | None = None) -> Par
             other = name
             break
 
+    if re.search(r"por ?que me (toco|tocaron|pusieron|asignaron)", t):
+        return ParsedMessage(Intent.EXPLAIN_SHIFT, day=day or today)
     if re.search(r"cambi|intercambi|cambalache", t):
         return ParsedMessage(Intent.REQUEST_SWAP, day=day, other_name=other)
     if re.search(r"incapacid|calamidad|no puedo ir|no voy a poder|enferm", t):
@@ -68,13 +72,14 @@ def parse_message(text: str, today: date, names: list[str] | None = None) -> Par
         return ParsedMessage(Intent.QUERY_HOURS)
     if re.search(r"\blibre\b|descans", t) and day:
         return ParsedMessage(Intent.REQUEST_DAY_OFF, day=day)
-    if re.search(r"prefier|me gusta\w*|evitar|no me gusta", t):
+    if re.search(r"prefier|me gusta\w*|evitar|no quiero|odio|detesto", t):
+        avoid = bool(re.search(NEGATIVE, t))
         for word, code in SHIFT_WORDS.items():
             if re.search(rf"\b{word}\b", t):
-                return ParsedMessage(Intent.REGISTER_PREFERENCE, shift_code=code)
+                return ParsedMessage(Intent.REGISTER_PREFERENCE, shift_code=code, extra={"avoid": avoid})
         for i, name in enumerate(WEEKDAYS):
             if re.search(rf"\b{name}s?\b", t):
-                return ParsedMessage(Intent.REGISTER_PREFERENCE, weekday=i)
+                return ParsedMessage(Intent.REGISTER_PREFERENCE, weekday=i, extra={"avoid": avoid})
     if re.search(r"turno|trabaj|me toca", t):
         return ParsedMessage(Intent.QUERY_SHIFT, day=day or today)
     return ParsedMessage(None)

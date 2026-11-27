@@ -18,9 +18,9 @@ from flask import (
 )
 
 from app.demo.export import build_workbook
-from app.demo.requests import absence_request, swap_requests
+from app.demo.requests import pending_absences, pending_keys, swap_requests
 from app.demo.state import get_state, reset_state
-from app.demo.whatsapp import reply
+from app.demo.whatsapp import reply, suggestions_for
 from engine.checks import apply_swap, check_swap, legal_alerts
 from engine.cost import roster_cost
 from engine.explain import explain
@@ -73,7 +73,7 @@ def _summary(index: int) -> dict:
         "unmet": [r for r in results if not r.fulfilled],
         "fairness": [f for f in fairness(problem, proposal) if f.nights_max or f.holidays_max],
         "gaps": coverage_gaps(problem, proposal),
-        "alerts": legal_alerts(problem, proposal),
+        "alerts": legal_alerts(problem, proposal, skip=pending_keys(state, index)),
     }
 
 
@@ -157,7 +157,7 @@ def _pulse(index: int) -> dict:
     for a in sorted(proposal.assignments, key=lambda a: a.employee_id):
         e = problem.employee(a.employee_id)
         people.setdefault((a.day, a.service, a.shift_code), []).append(
-            {"name": e.display_name, "role": ROLE_SHORT.get(e.role, e.role), "role_key": e.role}
+            {"id": e.id, "name": e.display_name, "role": ROLE_SHORT.get(e.role, e.role), "role_key": e.role}
         )
     days = []
     for d in range(problem.days):
@@ -222,7 +222,7 @@ def home():
         context |= {"summary": _summary(index), **_grid(index)}
         context["versions"] = [_summary(i) for i in range(len(state.proposals))]
         context["swaps"] = swap_requests(state, index)
-        context["pending_absence"] = absence_request(state, index)
+        context["pending_absences"] = pending_absences(state, index)
         context |= _pulse(index)
     return render_template("demo/home.html", **context)
 
@@ -233,10 +233,15 @@ def clinic():
     data = state.clinic
     if request.method == "POST":
         legal_max = data.legal_max_weekly_hours()
-        weekly = int(request.form.get("max_weekly_hours", legal_max))
+        weekly = _form_int("max_weekly_hours", 1, 168)
+        nights = _form_int("max_consecutive_nights", 1, 31)
+        work_days = _form_int("max_consecutive_work_days", 1, 31)
+        if None in (weekly, nights, work_days):
+            flash("Revise los valores: todos deben ser números enteros mayores que cero.")
+            return redirect(url_for("demo.clinic"))
         data.policy.update(
-            max_consecutive_nights=int(request.form["max_consecutive_nights"]),
-            max_consecutive_work_days=int(request.form["max_consecutive_work_days"]),
+            max_consecutive_nights=nights,
+            max_consecutive_work_days=work_days,
             rest_after_night="rest_after_night" in request.form,
             max_weekly_hours=min(weekly, legal_max),
         )
@@ -266,17 +271,25 @@ def team():
     state = get_state()
     data = state.clinic
     if request.method == "POST":
-        employee_id = request.form["employee_id"]
-        kind = PreferenceKind(request.form["kind"])
-        if kind == PreferenceKind.DAY_OFF:
-            day = data.day_index(date.fromisoformat(request.form["day"]))
-            pref = Preference(employee_id, kind, day, 3, f"Libre el {day + 1}")
-        elif kind == PreferenceKind.PREFER_SHIFT:
-            code = request.form["shift_code"]
-            pref = Preference(employee_id, kind, code, 2, f"Prefiere {data.shift_plural(code)}")
-        else:
-            wd = int(request.form["weekday"])
-            pref = Preference(employee_id, kind, wd, 2, f"Evitar {WEEKDAY_NAMES[wd].lower()}s")
+        try:
+            employee_id = request.form["employee_id"]
+            data.employee_name(employee_id)
+            kind = PreferenceKind(request.form["kind"])
+            if kind == PreferenceKind.DAY_OFF:
+                day = data.day_index(date.fromisoformat(request.form["day"]))
+                if not 0 <= day < data.days:
+                    raise ValueError
+                pref = Preference(employee_id, kind, day, 3, f"Libre el {day + 1}")
+            elif kind in (PreferenceKind.PREFER_SHIFT, PreferenceKind.AVOID_SHIFT):
+                code = request.form["shift_code"]
+                verb = "Prefiere" if kind == PreferenceKind.PREFER_SHIFT else "Evitar"
+                pref = Preference(employee_id, kind, code, 2, f"{verb} {data.shift_plural(code)}")
+            else:
+                wd = int(request.form["weekday"])
+                pref = Preference(employee_id, kind, wd, 2, f"Evitar {WEEKDAY_NAMES[wd].lower()}s")
+        except (KeyError, ValueError, StopIteration):
+            flash("Complete persona, tipo y valor de la preferencia.")
+            return redirect(url_for("demo.team"))
         data.extra_preferences.append(pref)
         flash(f"Preferencia agregada a {data.employee_name(employee_id)}.")
         return redirect(url_for("demo.team"))
@@ -297,10 +310,10 @@ def team():
 def generate():
     state = get_state()
     if request.method == "POST":
-        state.generate(current_app.config.get("DEMO_TIME_LIMIT", 6.0))
-        if not state.proposals:
-            flash("Con las reglas actuales no existe un cuadro posible. Revise reglas o personal.")
-            return redirect(url_for("demo.generate"))
+        if not state.generate(current_app.config.get("DEMO_TIME_LIMIT", 6.0)):
+            kept = " Se conservan las versiones anteriores." if state.proposals else ""
+            flash(f"{state.last_error}{kept}")
+            return redirect(url_for("demo.clinic"))
         return redirect(url_for("demo.home"))
     problem = state.clinic.problem()
     return render_template(
@@ -392,55 +405,104 @@ def published():
     return render_template("demo/published.html", notices=notices[:4])
 
 
+def _form_int(name: str, low: int, high: int) -> int | None:
+    """Entero de un formulario dentro de un rango, o None si viene vacío o inválido."""
+    try:
+        value = int(request.form.get(name, ""))
+    except ValueError:
+        return None
+    return value if low <= value <= high else None
+
+
+def _version_index() -> int:
+    state = get_state()
+    index = request.values.get("v", type=int)
+    if index is None or not 0 <= index < len(state.proposals):
+        index = state.selected if state.selected is not None else 0
+    return index
+
+
 @bp.route("/novedades", methods=["GET", "POST"])
 def absences():
     if (r := _require_proposals()) is not None:
         return r
     state = get_state()
-    affected, options = None, []
+    index = _version_index()
+    affected, options, employee_id, day = (
+        None,
+        [],
+        request.args.get("emp", ""),
+        request.args.get("dia", type=int),
+    )
     if request.method == "POST":
-        employee_id = request.form["employee_id"]
-        day = int(request.form["day"]) - 1
-        affected, options = state.register_absence(employee_id, day, request.form["kind"])
-        if request.form.get("key"):
-            state.handled.add(request.form["key"])
+        employee_id = request.form.get("employee_id", "")
+        day = _form_int("day", 1, state.clinic.days)
+        if day is None or employee_id not in {e.id for e in state.problem.employees}:
+            flash(f"Elija una persona y un día entre 1 y {state.clinic.days}.")
+            return redirect(url_for("demo.absences", v=index))
+        affected, options = state.register_absence(
+            employee_id, day - 1, request.form.get("kind") or ABSENCE_KINDS[0], index
+        )
         if affected is None:
             flash("Novedad registrada. Esa persona no tenía turno ese día; no hay que reemplazar.")
+    elif employee_id and day:
+        affected, options = state.affected(employee_id, day - 1, index)
     return render_template(
         "demo/absences.html",
         affected=affected,
         options=options,
         kinds=ABSENCE_KINDS,
-        prefill_emp=request.args.get("emp", ""),
-        prefill_day=request.args.get("dia", type=int) or state.today().day,
-        prefill_key=request.args.get("clave", ""),
+        index=index,
+        prefill_emp=employee_id,
+        prefill_day=day or state.today().day,
     )
 
 
 @bp.post("/novedades/reemplazar")
 def apply_replacement():
+    if (r := _require_proposals()) is not None:
+        return r
     state = get_state()
-    affected = Assignment(
-        request.form["employee_id"],
-        int(request.form["day"]),
-        request.form["shift_code"],
-        request.form["service"],
-    )
-    state.apply_replacement(affected, request.form["replacement_id"])
-    flash("Reemplazo aplicado. El cuadro quedó ajustado y se notificó por WhatsApp (simulado).")
-    index = state.selected if state.selected is not None else 0
+    index = _version_index()
+    try:
+        affected = Assignment(
+            request.form["employee_id"],
+            int(request.form["day"]),
+            request.form["shift_code"],
+            request.form["service"],
+        )
+    except (KeyError, ValueError):
+        flash("No se pudo aplicar el reemplazo. Inténtelo de nuevo desde Para revisar.")
+        return redirect(url_for("demo.home", v=index))
+    replacement = request.form.get("replacement_id", "")
+    if state.apply_replacement(affected, replacement, index):
+        name = state.clinic.employee_name(replacement).split()[0]
+        flash(
+            f"Listo: {state.clinic.employee_name(replacement)} cubre el turno. "
+            f"Le llegó por WhatsApp (simulado): «Hola {name}, te asignamos el turno del día "
+            f"{affected.day + 1}. ¿Confirmas?»"
+        )
+    else:
+        flash("Ese turno ya no está asignado a esa persona; no se hizo ningún cambio.")
     return redirect(url_for("demo.home", v=index))
 
 
 @bp.post("/solicitudes/cambio")
 def approve_swap():
+    if (r := _require_proposals()) is not None:
+        return r
     state = get_state()
-    index = int(request.form["index"])
-    requester, other, day = request.form["requester"], request.form["other"], int(request.form["day"])
+    index = _version_index()
+    requester, other = request.form.get("requester", ""), request.form.get("other", "")
+    day = _form_int("day", 0, state.clinic.days - 1)
+    ids = {e.id for e in state.problem.employees}
+    if day is None or requester not in ids or other not in ids:
+        flash("La solicitud ya no es válida.")
+        return redirect(url_for("demo.home", v=index))
     check = check_swap(state.problem, state.proposals[index], requester, other, day)
     if check.valid:
         apply_swap(check, other)
-        state.handled.add(request.form["key"])
+        state.handled.add(request.form.get("key", ""))
         state.log.append(
             f"Cambio aprobado: {state.clinic.employee_name(other)} cubre a "
             f"{state.clinic.employee_name(requester)} el día {day + 1}."
@@ -451,15 +513,46 @@ def approve_swap():
     return redirect(url_for("demo.home", v=index))
 
 
+@bp.post("/solicitudes/rechazar")
+def reject_swap():
+    state = get_state()
+    index = _version_index()
+    requester = request.form.get("requester", "")
+    state.handled.add(request.form.get("key", ""))
+    if state.problem and requester in {e.id for e in state.problem.employees}:
+        name = state.clinic.employee_name(requester)
+        state.log.append(f"Se avisó a {name} que su cambio no cumple las reglas.")
+        flash(
+            f"Se le avisó a {name} por WhatsApp (simulado) por qué no se puede y quiénes sí podrían cubrir."
+        )
+    return redirect(url_for("demo.home", v=index))
+
+
+def whatsapp_examples(state) -> tuple[dict[str, list[str]], str]:
+    """Mensajes de ejemplo por persona y la persona sugerida (para quien todos funcionan)."""
+    examples, default = {}, None
+    for e in state.clinic.raw["employees"]:
+        own = suggestions_for(state, e["id"])
+        examples[e["id"]] = own or WHATSAPP_SUGGESTIONS
+        if own and default is None and e["role"] == "auxiliar_enfermeria":
+            default = e["id"]
+    return examples, default or state.clinic.raw["employees"][0]["id"]
+
+
 @bp.get("/whatsapp")
 def whatsapp():
-    return render_template("demo/whatsapp.html", step=7, suggestions=WHATSAPP_SUGGESTIONS)
+    examples, default = whatsapp_examples(get_state())
+    return render_template("demo/whatsapp.html", step=7, examples=examples, default_emp=default)
 
 
 @bp.post("/api/whatsapp")
 def whatsapp_api():
-    payload = request.get_json(force=True)
-    return jsonify(reply=reply(get_state(), payload["employee_id"], payload["text"]))
+    payload = request.get_json(silent=True) or {}
+    state = get_state()
+    employee_id, text = payload.get("employee_id"), str(payload.get("text", ""))
+    if employee_id not in {e["id"] for e in state.clinic.raw["employees"]}:
+        return jsonify(reply="Elige primero quién escribe."), 400
+    return jsonify(reply=reply(state, employee_id, text))
 
 
 @bp.get("/exportar/<int:index>")
