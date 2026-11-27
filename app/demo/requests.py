@@ -3,11 +3,11 @@
 from dataclasses import dataclass
 
 from app.demo.state import DemoState
-from engine.checks import SwapCheck, check_swap
+from engine.checks import SwapCheck, check_swap, suggest_replacements
 
 # Solicitudes ficticias que llegaron por WhatsApp: quién pide, con quién y desde qué día.
 SWAP_SEEDS = [("EMP-006", "auxiliar_enfermeria", 9), ("EMP-014", "enfermera_jefe", 16)]
-ABSENCE_SEED = ("EMP-009", 10)
+ABSENCE_SEEDS = [("EMP-009", 10), ("EMP-005", 10), ("EMP-002", 10)]
 
 
 @dataclass
@@ -44,9 +44,14 @@ def swap_requests(state: DemoState, index: int) -> list[SwapRequest]:
 
 
 def absence_request(state: DemoState, index: int):
-    employee_id, start = ABSENCE_SEED
-    proposal = state.proposals[index]
-    for day in range(start, state.problem.days):
-        if proposal.at(employee_id, day) and f"absence-{employee_id}" not in state.handled:
-            return {"key": f"absence-{employee_id}", "employee_id": employee_id, "day": day}
+    """Una incapacidad reportada sobre un turno que sí tiene reemplazos posibles."""
+    problem, proposal = state.problem, state.proposals[index]
+    for employee_id, start in ABSENCE_SEEDS:
+        key = f"absence-{employee_id}"
+        if key in state.handled:
+            continue
+        for day in range(start, problem.days):
+            shift = proposal.at(employee_id, day)
+            if shift and suggest_replacements(problem, proposal, shift):
+                return {"key": key, "employee_id": employee_id, "day": day}
     return None

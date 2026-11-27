@@ -91,6 +91,11 @@ def main(out: Path) -> None:
         }
         (out / f"explicaciones-{i}.json").write_text(json.dumps(data, ensure_ascii=False))
 
+    pending = absence_request(state, 0)
+    example = {"employee_id": pending["employee_id"], "day": pending["day"] + 1, "kind": "Incapacidad"}
+    html = client.post("/novedades", data=example).get_data(as_text=True)
+    (out / "novedades.html").write_text(rewrite(html), encoding="utf-8")
+
     (out / "whatsapp.html").write_text(
         rewrite(client.get("/whatsapp").get_data(as_text=True)), encoding="utf-8"
     )
@@ -99,11 +104,6 @@ def main(out: Path) -> None:
         for text in WHATSAPP_SUGGESTIONS:
             replies[e.id][text] = reply(state, e.id, text)
     (out / "whatsapp.json").write_text(json.dumps(replies, ensure_ascii=False))
-
-    pending = absence_request(state, 0)
-    example = {"employee_id": pending["employee_id"], "day": pending["day"] + 1, "kind": "Incapacidad"}
-    html = client.post("/novedades", data=example).get_data(as_text=True)
-    (out / "novedades.html").write_text(rewrite(html), encoding="utf-8")
 
     static = Path(app.static_folder)
     css = (static / "luna.css").read_text(encoding="utf-8")
