@@ -12,13 +12,13 @@ from pathlib import Path
 
 from app import create_app
 from app.config import Config
+from app.demo.requests import absence_request
 from app.demo.state import get_state, reset_state
 from app.demo.whatsapp import reply
 from app.routes.demo import WEEKDAY_NAMES, WHATSAPP_SUGGESTIONS
 from engine.explain import explain
 
 MEETING_DAY = date(2026, 12, 3)
-ABSENCE_EXAMPLE = {"employee_id": "EMP-002", "kind": "Incapacidad"}
 
 
 class ExportConfig(Config):
@@ -100,8 +100,9 @@ def main(out: Path) -> None:
             replies[e.id][text] = reply(state, e.id, text)
     (out / "whatsapp.json").write_text(json.dumps(replies, ensure_ascii=False))
 
-    day = MEETING_DAY.day
-    html = client.post("/novedades", data={**ABSENCE_EXAMPLE, "day": day}).get_data(as_text=True)
+    pending = absence_request(state, 0)
+    example = {"employee_id": pending["employee_id"], "day": pending["day"] + 1, "kind": "Incapacidad"}
+    html = client.post("/novedades", data=example).get_data(as_text=True)
     (out / "novedades.html").write_text(rewrite(html), encoding="utf-8")
 
     static = Path(app.static_folder)
