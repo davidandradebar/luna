@@ -13,6 +13,27 @@
   </form>
 </div>
 
+{% if registered %}
+<div class="card">
+  <h3>Novedades del mes</h3>
+  <div class="table-wrap"><table class="table compact">
+    <thead><tr><th>Persona</th><th>Día</th><th>Tipo</th><th>Llegó por</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+    {% for r in registered %}
+    <tr>
+      <td>{{ clinic.employee_name(r.absence.employee_id) }}</td>
+      <td>{{ r.absence.day + 1 }}</td>
+      <td>{{ r.absence.kind }}</td>
+      <td>{{ r.absence.source }}</td>
+      <td>{% if r.pending %}<span class="warn-text">⚠ {{ r.status }}</span>{% else %}<span class="good">✓ {{ r.status }}</span>{% endif %}</td>
+      <td>{% if r.pending and not static_export %}<a href="{{ url_for('demo.absences', emp=r.absence.employee_id, dia=r.absence.day + 1, v=index) }}">Ver reemplazos</a>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endif %}
+
 {% if affected %}
 <div class="card">
   <h3>{{ clinic.employee_name(affected.employee_id) }} no podrá cubrir: {{ state.problem.shift(affected.shift_code).label }} del día {{ affected.day + 1 }} en {{ clinic.service_label(affected.service) }}</h3>

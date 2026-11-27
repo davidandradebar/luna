@@ -9,6 +9,17 @@
     </label>
     <p class="muted small">Mensajes de ejemplo para esta persona:</p>
     <div class="suggestions" id="wa-chips"></div>
+    {% if inbox %}
+    <h3 class="section-title">Últimos mensajes del equipo</h3>
+    <ul class="wa-inbox">
+      {% for m in inbox %}
+      <li><span class="av">{{ clinic.employee_name(m.who).split()|map('first')|join('')|upper }}</span>
+        <div><b>{{ clinic.employee_name(m.who) }}</b> <span class="muted small">· día {{ m.day + 1 }}</span>
+          <p class="wa-quote">«{{ m.text }}»</p>
+          <p class="small muted">LUNA: {{ m.luna }}</p></div></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
     {% if not state.chosen %}<p class="small warn-text">Primero apruebe y publique un cuadro: el equipo solo consulta el cuadro publicado.</p>{% endif %}
   </div>
   <div class="phone">

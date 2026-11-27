@@ -447,8 +447,18 @@ def absences():
             flash("Novedad registrada. Esa persona no tenía turno ese día; no hay que reemplazar.")
     elif employee_id and day:
         affected, options = state.affected(employee_id, day - 1, index)
+    proposal = state.proposals[index]
+    registered = [
+        {
+            "absence": a,
+            "status": "Pendiente de reemplazo" if proposal.at(a.employee_id, a.day) else "Turno cubierto",
+            "pending": proposal.at(a.employee_id, a.day) is not None,
+        }
+        for a in sorted(state.clinic.absences, key=lambda a: a.day)
+    ]
     return render_template(
         "demo/absences.html",
+        registered=registered,
         affected=affected,
         options=options,
         kinds=ABSENCE_KINDS,
@@ -541,8 +551,35 @@ def whatsapp_examples(state) -> tuple[dict[str, list[str]], str]:
 
 @bp.get("/whatsapp")
 def whatsapp():
-    examples, default = whatsapp_examples(get_state())
-    return render_template("demo/whatsapp.html", step=7, examples=examples, default_emp=default)
+    state = get_state()
+    examples, default = whatsapp_examples(state)
+    inbox = []
+    if state.proposals:
+        index = state.selected if state.selected is not None else 0
+        for a in state.clinic.absences:
+            if a.source == "WhatsApp":
+                inbox.append(
+                    {
+                        "who": a.employee_id,
+                        "day": a.day,
+                        "text": f"Tengo incapacidad, no puedo ir el {a.day + 1}.",
+                        "luna": "Registrada. Aparece en Para revisar con opciones de reemplazo.",
+                    }  # fmt: skip
+                )
+        for r in swap_requests(state, index):
+            inbox.append(
+                {
+                    "who": r.requester,
+                    "day": r.day,
+                    "text": f"¿Puedo cambiar mi turno del {r.day + 1} con "
+                    f"{state.clinic.employee_name(r.other).split()[0]}?",
+                    "luna": "Validado: cumple las reglas. Espera su aprobación."
+                    if r.check.valid
+                    else f"No se puede: {r.check.reasons[0].lower()}.",
+                }  # fmt: skip
+            )
+    inbox.sort(key=lambda m: m["day"])
+    return render_template("demo/whatsapp.html", step=7, examples=examples, default_emp=default, inbox=inbox)
 
 
 @bp.post("/api/whatsapp")

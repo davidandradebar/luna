@@ -25,6 +25,28 @@ HELP = (
 )
 
 
+# La explicación del motor habla de la persona; por WhatsApp se le habla a ella.
+SECOND_PERSON = [
+    ("de su cargo", "de tu cargo"),
+    ("su preferencia", "tu preferencia"),
+    ("Su preferencia", "Tu preferencia"),
+    ("su descanso", "tu descanso"),
+    ("Tiene ", "Tienes "),
+    ("Lleva ", "Llevas "),
+    ("Prefiere evitar", "Prefieres evitar"),
+    ("Pidió", "Pediste"),
+    ("le tocó", "te tocó"),
+    ("Descansa porque", "Descansas porque"),
+    ("hizo noche", "hiciste noche"),
+]
+
+
+def _to_you(line: str) -> str:
+    for third, second in SECOND_PERSON:
+        line = line.replace(third, second)
+    return line
+
+
 def _fmt(state: DemoState, day: int) -> str:
     d = state.clinic.date_of(day)
     return f"{WEEKDAYS[d.weekday()]} {d.day} de {MONTHS[d.month - 1]}"
@@ -115,8 +137,10 @@ def reply(state: DemoState, employee_id: str, text: str) -> str:
         if a is None:
             return f"El {_fmt(state, day)} no tienes turno."
         why = explain(problem, proposal, employee_id, day)
-        reasons = "\n".join(f"• {line}" for line in why["lines"])
-        return f"Tu turno del {_fmt(state, day)} ({why['title'].lower()}):\n{reasons}"
+        reasons = "\n".join(f"• {_to_you(line)}" for line in why["lines"])
+        shift = problem.shift(a.shift_code)
+        hours = f"{shift.start} a {shift.end}"
+        return f"Tu turno de {shift.label.lower()} del {_fmt(state, day)} ({hours}):\n{reasons}"
 
     if parsed.intent == Intent.QUERY_HOURS:
         mine = proposal.for_employee(employee_id)

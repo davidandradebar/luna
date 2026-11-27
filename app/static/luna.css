@@ -131,6 +131,11 @@ h3 { font-size: 1.05rem; font-weight: 700; margin: .2rem 0 .5rem; }
 .item-alert .item-kind::before { content: "⚠ "; }
 .inbox-note { margin: 0; }
 .table-wrap { overflow-x: auto; max-width: 100%; }
+.section-title { margin: 1.4rem 0 .6rem; font-size: 1rem; }
+.wa-inbox { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; }
+.wa-inbox li { display: flex; gap: .7rem; align-items: flex-start; padding: .75rem; border-radius: 14px; background: var(--tint-soft); }
+.wa-inbox p { margin: .2rem 0 0; }
+.wa-quote { font-style: italic; }
 .person { display: flex; gap: .45rem; align-items: center; min-width: 0; width: 100%; background: none; border: 0; padding: .1rem; margin: -.1rem; font: inherit; color: inherit; text-align: left; cursor: pointer; border-radius: 10px; }
 .person:hover { background: var(--tint); }
 .person:focus-visible { outline: 2px solid var(--primary); }
@@ -280,14 +285,14 @@ dialog .close { position: absolute; right: 1rem; top: 1rem; background: none; bo
 .month { margin-top: 1.2rem; }
 .month-wrap { overflow-x: auto; }
 .month-grid { border-collapse: separate; border-spacing: 3px; font-size: .78rem; }
-.month-grid th, .month-grid td { min-width: 1.45rem; height: 1.6rem; text-align: center; padding: 0; }
+.month-grid th, .month-grid td { min-width: 1.3rem; height: 1.6rem; text-align: center; padding: 0; }
 .month-grid thead th { font-weight: 600; color: var(--muted); font-size: .7rem; }
 .month-grid thead th button { background: none; border: 0; font: inherit; color: inherit; cursor: pointer; padding: .15rem .1rem; border-radius: 8px; width: 100%; line-height: 1.2; }
 .month-grid th.day.holiday button { color: var(--primary); font-weight: 800; }
 .month-grid th.day.today button { background: var(--accent); color: var(--ink); font-weight: 800; }
 .month-grid th.day.sel button { outline: 2px solid var(--primary); }
 .month-grid .marks th { height: 1.1rem; }
-.month-grid .sticky { position: sticky; left: 0; background: var(--surface); text-align: left; min-width: 118px; padding-right: .5rem; z-index: 1; font-weight: 500; }
+.month-grid .sticky { position: sticky; left: 0; background: var(--surface); text-align: left; min-width: 104px; padding-right: .5rem; z-index: 1; font-weight: 500; }
 .month-grid tbody .sticky { display: flex; flex-direction: column; justify-content: center; line-height: 1.15; }
 .month-grid tbody .sticky b { font-size: .78rem; color: var(--text); }
 .month-grid tbody .sticky span { font-size: .72rem; color: var(--muted); }
