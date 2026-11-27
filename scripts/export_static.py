@@ -109,11 +109,15 @@ def main(out: Path) -> None:
 
     static = Path(app.static_folder)
     css = (static / "luna.css").read_text(encoding="utf-8")
-    logo = base64.b64encode((static / "img" / "logo_joint_blanco.png").read_bytes()).decode()
+    logos = {
+        f"/static/img/{img.name}": base64.b64encode(img.read_bytes()).decode()
+        for img in (static / "img").glob("*.png")
+    }
     link = '<link rel="stylesheet" href="static/luna.css">'
     for page in out.glob("*.html"):
         html = page.read_text(encoding="utf-8").replace(link, f"<style>{css}</style>")
-        html = html.replace("/static/img/logo_joint_blanco.png", f"data:image/png;base64,{logo}")
+        for path, data in logos.items():
+            html = html.replace(path, f"data:image/png;base64,{data}")
         page.write_text(html, encoding="utf-8")
 
     # Página de entrada sin esqueleto propio (el visor agrega doctype, head y body).
