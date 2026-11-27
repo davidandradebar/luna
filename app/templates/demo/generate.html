@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Cómo decide LUNA</h1>
+<p class="lead">LUNA busca entre millones de combinaciones y propone 3 cuadros distintos. Todos cumplen las reglas; cambian en qué priorizan.</p>
+<div class="cards two">
+  <div class="card">
+    <h3>Lo que nunca se rompe</h3>
+    <ul class="checks">
+      <li>Cubrir los {{ slots }} turnos del mes con el personal mínimo de cada servicio</li>
+      <li>Solo asignar a quien está habilitado para el servicio</li>
+      <li>Un solo turno por día por persona, sin cruces</li>
+      <li>Máximo {{ problem.max_weekly_hours }} horas por semana</li>
+      <li>Máximo {{ problem.max_consecutive_nights }} noches y {{ problem.max_consecutive_work_days }} días seguidos</li>
+      {% if problem.forbidden_sequences %}<li>Descanso después de cada noche</li>{% endif %}
+      <li>Respetar incapacidades, vacaciones y la disponibilidad de cada persona</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Lo que se busca cumplir al máximo</h3>
+    <ul class="checks soft">
+      <li>{{ problem.preferences|length }} preferencias y peticiones del equipo</li>
+      <li>Reparto justo de noches, domingos y festivos</li>
+      <li>Prioridad a quien el mes pasado se le cumplió poco</li>
+      <li>Menor costo de recargos</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

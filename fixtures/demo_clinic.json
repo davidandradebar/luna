@@ -1,0 +1,580 @@
+{
+  "_nota": "Datos 100% ficticios para la demo. Nombres, salarios y preferencias son inventados.",
+  "tenant": {
+    "id": "tenant_demo",
+    "name": "Clínica Demo",
+    "regime": "private",
+    "sites": [
+      {
+        "id": "sede_principal",
+        "name": "Sede principal"
+      }
+    ]
+  },
+  "period": {
+    "year": 2026,
+    "month": 12,
+    "label": "Diciembre 2026"
+  },
+  "holidays": [
+    "2026-12-08",
+    "2026-12-25"
+  ],
+  "roles": {
+    "psiquiatra": "Psiquiatra",
+    "enfermera_jefe": "Jefe de enfermería",
+    "auxiliar_enfermeria": "Auxiliar de enfermería",
+    "psicologo": "Psicólogo",
+    "terapeuta_ocupacional": "Terapeuta ocupacional"
+  },
+  "services": [
+    {
+      "id": "agudos",
+      "name": "Hospitalización agudos",
+      "description": "Pacientes en crisis, vigilancia 24 horas"
+    },
+    {
+      "id": "intermedios",
+      "name": "Hospitalización intermedios",
+      "description": "Pacientes estabilizados en proceso de egreso"
+    }
+  ],
+  "shift_types": [
+    {
+      "code": "M",
+      "label": "Mañana",
+      "start": "07:00",
+      "end": "13:00",
+      "hours": 6,
+      "crosses_midnight": false
+    },
+    {
+      "code": "T",
+      "label": "Tarde",
+      "start": "13:00",
+      "end": "19:00",
+      "hours": 6,
+      "crosses_midnight": false
+    },
+    {
+      "code": "N",
+      "label": "Noche",
+      "start": "19:00",
+      "end": "07:00",
+      "hours": 12,
+      "crosses_midnight": true
+    }
+  ],
+  "coverage": [
+    {
+      "service": "agudos",
+      "role": "auxiliar_enfermeria",
+      "shifts": {
+        "M": 2,
+        "T": 2,
+        "N": 1
+      },
+      "days": "all"
+    },
+    {
+      "service": "agudos",
+      "role": "enfermera_jefe",
+      "shifts": {
+        "M": 1,
+        "T": 1,
+        "N": 1
+      },
+      "days": "all"
+    },
+    {
+      "service": "intermedios",
+      "role": "auxiliar_enfermeria",
+      "shifts": {
+        "M": 1,
+        "T": 1,
+        "N": 1
+      },
+      "days": "all"
+    },
+    {
+      "service": "intermedios",
+      "role": "enfermera_jefe",
+      "shifts": {
+        "M": 1,
+        "T": 1
+      },
+      "days": "all"
+    },
+    {
+      "service": "agudos",
+      "role": "psiquiatra",
+      "shifts": {
+        "M": 1
+      },
+      "days": "business"
+    },
+    {
+      "service": "intermedios",
+      "role": "psiquiatra",
+      "shifts": {
+        "M": 1
+      },
+      "days": "business"
+    },
+    {
+      "service": "agudos",
+      "role": "psicologo",
+      "shifts": {
+        "M": 1
+      },
+      "days": "business"
+    },
+    {
+      "service": "intermedios",
+      "role": "psicologo",
+      "shifts": {
+        "M": 1
+      },
+      "days": "business"
+    },
+    {
+      "service": "agudos",
+      "role": "terapeuta_ocupacional",
+      "shifts": {
+        "T": 1
+      },
+      "days": "business"
+    }
+  ],
+  "clinic_policy": {
+    "max_consecutive_nights": {
+      "value": 3,
+      "label": "Máximo de noches seguidas"
+    },
+    "max_consecutive_work_days": {
+      "value": 6,
+      "label": "Máximo de días seguidos trabajando"
+    },
+    "rest_after_night": {
+      "value": true,
+      "label": "Descanso obligatorio después de una noche (no mañana ni tarde al día siguiente)"
+    },
+    "max_weekly_hours": {
+      "value": 42,
+      "label": "Horas máximas por semana (no puede superar la ley)"
+    }
+  },
+  "employees": [
+    {
+      "id": "EMP-001",
+      "name": "Ana R.",
+      "role": "auxiliar_enfermeria",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 2300000,
+      "min_monthly_hours": 144
+    },
+    {
+      "id": "EMP-002",
+      "name": "Carlos M.",
+      "role": "auxiliar_enfermeria",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 2450000,
+      "min_monthly_hours": 144
+    },
+    {
+      "id": "EMP-003",
+      "name": "Diana P.",
+      "role": "auxiliar_enfermeria",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 2600000,
+      "min_monthly_hours": 144
+    },
+    {
+      "id": "EMP-004",
+      "name": "Esteban L.",
+      "role": "auxiliar_enfermeria",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 2750000,
+      "min_monthly_hours": 144
+    },
+    {
+      "id": "EMP-005",
+      "name": "Fabiola T.",
+      "role": "auxiliar_enfermeria",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 2300000,
+      "min_monthly_hours": 144
+    },
+    {
+      "id": "EMP-006",
+      "name": "Gustavo H.",
+      "role": "auxiliar_enfermeria",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 2450000,
+      "min_monthly_hours": 144
+    },
+    {
+      "id": "EMP-007",
+      "name": "Helena V.",
+      "role": "auxiliar_enfermeria",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 2600000,
+      "min_monthly_hours": 144
+    },
+    {
+      "id": "EMP-008",
+      "name": "Iván C.",
+      "role": "auxiliar_enfermeria",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 2750000,
+      "min_monthly_hours": 144
+    },
+    {
+      "id": "EMP-009",
+      "name": "Juliana O.",
+      "role": "auxiliar_enfermeria",
+      "competencies": [
+        "agudos"
+      ],
+      "monthly_salary": 2300000,
+      "min_monthly_hours": 144
+    },
+    {
+      "id": "EMP-010",
+      "name": "Kevin S.",
+      "role": "auxiliar_enfermeria",
+      "competencies": [
+        "agudos"
+      ],
+      "monthly_salary": 2450000,
+      "min_monthly_hours": 144
+    },
+    {
+      "id": "EMP-011",
+      "name": "Laura B.",
+      "role": "auxiliar_enfermeria",
+      "competencies": [
+        "intermedios"
+      ],
+      "monthly_salary": 2600000,
+      "min_monthly_hours": 144
+    },
+    {
+      "id": "EMP-012",
+      "name": "Mario G.",
+      "role": "auxiliar_enfermeria",
+      "competencies": [
+        "intermedios"
+      ],
+      "monthly_salary": 2750000,
+      "min_monthly_hours": 144
+    },
+    {
+      "id": "EMP-013",
+      "name": "Natalia E.",
+      "role": "enfermera_jefe",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 3900000,
+      "min_monthly_hours": 132
+    },
+    {
+      "id": "EMP-014",
+      "name": "Óscar F.",
+      "role": "enfermera_jefe",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 4200000,
+      "min_monthly_hours": 132
+    },
+    {
+      "id": "EMP-015",
+      "name": "Paula Q.",
+      "role": "enfermera_jefe",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 4500000,
+      "min_monthly_hours": 132
+    },
+    {
+      "id": "EMP-016",
+      "name": "Ricardo N.",
+      "role": "enfermera_jefe",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 4800000,
+      "min_monthly_hours": 132
+    },
+    {
+      "id": "EMP-017",
+      "name": "Sandra Y.",
+      "role": "enfermera_jefe",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 3900000,
+      "min_monthly_hours": 132
+    },
+    {
+      "id": "EMP-018",
+      "name": "Tomás A.",
+      "role": "enfermera_jefe",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 4200000,
+      "min_monthly_hours": 132
+    },
+    {
+      "id": "EMP-019",
+      "name": "Valeria D.",
+      "role": "enfermera_jefe",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 4500000,
+      "min_monthly_hours": 132
+    },
+    {
+      "id": "EMP-020",
+      "name": "Wilson J.",
+      "role": "enfermera_jefe",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 4800000,
+      "min_monthly_hours": 132
+    },
+    {
+      "id": "EMP-021",
+      "name": "Dra. Ximena U.",
+      "role": "psiquiatra",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 10500000
+    },
+    {
+      "id": "EMP-022",
+      "name": "Dr. Andrés K.",
+      "role": "psiquiatra",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 11500000
+    },
+    {
+      "id": "EMP-023",
+      "name": "Beatriz Z.",
+      "role": "psicologo",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 3800000
+    },
+    {
+      "id": "EMP-024",
+      "name": "Camilo I.",
+      "role": "psicologo",
+      "competencies": [
+        "agudos",
+        "intermedios"
+      ],
+      "monthly_salary": 4100000
+    },
+    {
+      "id": "EMP-025",
+      "name": "Daniela W.",
+      "role": "terapeuta_ocupacional",
+      "competencies": [
+        "agudos"
+      ],
+      "monthly_salary": 3600000
+    }
+  ],
+  "availability": [
+    {
+      "employee_id": "EMP-003",
+      "weekday": 1,
+      "shift_code": "T",
+      "note": "No puede martes en la tarde (estudia)"
+    },
+    {
+      "employee_id": "EMP-017",
+      "weekday": null,
+      "shift_code": "N",
+      "note": "No puede hacer noches (recomendación médica)"
+    }
+  ],
+  "preferences": [
+    {
+      "employee_id": "EMP-001",
+      "kind": "prefer_shift",
+      "value": "N",
+      "weight": 2,
+      "note": "Prefiere noches"
+    },
+    {
+      "employee_id": "EMP-004",
+      "kind": "prefer_shift",
+      "value": "N",
+      "weight": 2,
+      "note": "Prefiere noches"
+    },
+    {
+      "employee_id": "EMP-006",
+      "kind": "prefer_shift",
+      "value": "M",
+      "weight": 2,
+      "note": "Prefiere mañanas"
+    },
+    {
+      "employee_id": "EMP-008",
+      "kind": "prefer_shift",
+      "value": "M",
+      "weight": 2,
+      "note": "Prefiere mañanas"
+    },
+    {
+      "employee_id": "EMP-014",
+      "kind": "prefer_shift",
+      "value": "N",
+      "weight": 2,
+      "note": "Prefiere noches"
+    },
+    {
+      "employee_id": "EMP-018",
+      "kind": "prefer_shift",
+      "value": "M",
+      "weight": 2,
+      "note": "Prefiere mañanas"
+    },
+    {
+      "employee_id": "EMP-002",
+      "kind": "avoid_weekday",
+      "value": 6,
+      "weight": 2,
+      "note": "Evitar domingos"
+    },
+    {
+      "employee_id": "EMP-011",
+      "kind": "avoid_weekday",
+      "value": 6,
+      "weight": 2,
+      "note": "Evitar domingos"
+    },
+    {
+      "employee_id": "EMP-016",
+      "kind": "avoid_weekday",
+      "value": 5,
+      "weight": 2,
+      "note": "Evitar sábados"
+    },
+    {
+      "employee_id": "EMP-005",
+      "kind": "day_off",
+      "value": "2026-12-24",
+      "weight": 3,
+      "note": "Libre el 24 (Nochebuena)"
+    },
+    {
+      "employee_id": "EMP-007",
+      "kind": "day_off",
+      "value": "2026-12-25",
+      "weight": 3,
+      "note": "Libre el 25 (Navidad)"
+    },
+    {
+      "employee_id": "EMP-009",
+      "kind": "day_off",
+      "value": "2026-12-31",
+      "weight": 3,
+      "note": "Libre el 31"
+    },
+    {
+      "employee_id": "EMP-003",
+      "kind": "day_off",
+      "value": "2026-12-15",
+      "weight": 3,
+      "note": "Libre el 15 (grado de su hija)"
+    },
+    {
+      "employee_id": "EMP-010",
+      "kind": "day_off",
+      "value": "2026-12-08",
+      "weight": 3,
+      "note": "Libre el 8 (festivo)"
+    },
+    {
+      "employee_id": "EMP-015",
+      "kind": "day_off",
+      "value": "2026-12-24",
+      "weight": 3,
+      "note": "Libre el 24 (Nochebuena)"
+    },
+    {
+      "employee_id": "EMP-019",
+      "kind": "day_off",
+      "value": "2026-12-31",
+      "weight": 3,
+      "note": "Libre el 31"
+    },
+    {
+      "employee_id": "EMP-012",
+      "kind": "day_off",
+      "value": "2026-12-18",
+      "weight": 3,
+      "note": "Libre el 18 (cita médica)"
+    }
+  ],
+  "history": {
+    "EMP-003": {
+      "last_month_fulfilled": 0.4
+    },
+    "EMP-010": {
+      "last_month_fulfilled": 0.35
+    },
+    "EMP-015": {
+      "last_month_fulfilled": 0.4
+    }
+  }
+}

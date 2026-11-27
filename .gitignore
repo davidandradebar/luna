@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Entorno y secretos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Datos locales (nunca subir datos reales de personas)
+data/
+exports/
+*.xlsx
+*.xls
+*.csv
+!fixtures/*.csv
+
+# Editores y sistema
+.idea/
+.vscode/
+.DS_Store
+build/

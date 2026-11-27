@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Comparar versiones</h1>
+<p class="lead">Generadas en {{ state.generated_in|round(1) }} segundos. Las tres cumplen todas las reglas. Usted decide qué priorizar.</p>
+<div class="cards three">
+  {% for s in summaries %}
+  {% set p = s.proposal %}
+  <div class="card proposal {{ 'recommended' if p.strategy.key == 'balanced' }}">
+    {% if p.strategy.key == 'balanced' %}<span class="ribbon">Recomendado</span>{% endif %}
+    <h2>{{ p.strategy.label }}</h2>
+    <p class="muted">{{ p.strategy.description }}</p>
+    <dl class="kpis">
+      <dt>Preferencias cumplidas</dt>
+      <dd><div class="meter"><span style="width: {{ (s.pref_rate * 100)|round|int }}%"></span></div><b>{{ (s.pref_rate * 100)|round|int }}%</b></dd>
+      <dt>Costo estimado del mes</dt>
+      <dd><b>{{ s.cost.total|cop }}</b>
+        {% if s.cost.total > cheapest %}<span class="small muted">+{{ (s.cost.total - cheapest)|cop }}</span>{% else %}<span class="small good">el más económico</span>{% endif %}</dd>
+      <dt>Recargos (noches, domingos, festivos)</dt>
+      <dd>{{ s.cost.surcharges|cop }}</dd>
+      {% for f in s.fairness %}
+      <dt>Noches por {{ clinic.role_label(f.role)|lower }}</dt>
+      <dd>entre {{ f.nights_min }} y {{ f.nights_max }} {% if f.nights_max - f.nights_min <= 2 %}<span class="good small">parejo</span>{% else %}<span class="warn-text small">desigual</span>{% endif %}</dd>
+      {% endfor %}
+      <dt>Cobertura</dt>
+      <dd>{% if s.gaps %}<span class="warn-text">{{ s.gaps|length }} turnos sin cubrir</span>{% else %}<span class="good">100% cubierta</span>{% endif %}</dd>
+    </dl>
+    {% if s.unmet %}
+    <details><summary>No se cumplió del todo a {{ s.unmet|length }} {{ 'persona' if s.unmet|length == 1 else 'personas' }}</summary>
+      <ul class="small">{% for r in s.unmet %}<li>{{ clinic.employee_name(r.preference.employee_id) }}: {{ r.preference.note }} ({{ r.detail }})</li>{% endfor %}</ul>
+    </details>
+    {% else %}<p class="good small">Se cumplieron todas las preferencias.</p>{% endif %}
+    <div class="actions">
+      <a class="btn" href="{{ url_for('demo.home', v=s.index) }}">Ver cuadro</a>
+      {% set kind = 'primary' if s.proposal.strategy.key == 'balanced' else '' %}
+      {% if static_export %}<a class="btn {{ kind }}" href="{{ url_for('demo.published') }}">Elegir y publicar</a>{% else %}<form method="post" action="{{ url_for('demo.publish', index=s.index) }}"><button class="btn {{ kind }}">Elegir y publicar</button></form>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Reglas de la clínica</h1>
+<p class="lead">LUNA se adapta a cómo funciona su clínica: sus servicios, sus turnos y sus reglas.</p>
+
+<div class="cards two">
+  {% for s in clinic.raw.services %}
+  <div class="card">
+    <h3>{{ s.name }}</h3>
+    <p class="muted">{{ s.description }}</p>
+    <div class="table-wrap"><table class="table compact">
+      <thead><tr><th>Cargo</th>{% for t in clinic.raw.shift_types %}<th>{{ t.label }}</th>{% endfor %}<th>Días</th></tr></thead>
+      <tbody>
+      {% for item in coverage[s.id] %}
+        <tr><td>{{ clinic.role_label(item.role) }}</td>
+          {% for t in clinic.raw.shift_types %}<td class="center">{{ item.shifts.get(t.code, '—') }}</td>{% endfor %}
+          <td>{{ 'Todos' if item.days == 'all' else 'Hábiles' }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>Turnos</h2>
+<div class="chips">
+  {% for t in clinic.raw.shift_types %}
+    <span class="shift shift-{{ t.code }}">{{ t.code }}</span> {{ t.label }} {{ t.start }}–{{ t.end }} ({{ t.hours }} h) &nbsp;
+  {% endfor %}
+</div>
+
+<div class="cards two">
+  <div class="card">
+    <h3>Reglas de la ley <span class="badge warn">por verificar</span></h3>
+    <p class="muted">Son el piso. Vienen de una tabla con fecha de vigencia; cuando la ley cambia, se actualiza la tabla, no el sistema.</p>
+    <div class="table-wrap"><table class="table compact">
+      {% for label, rule, unit in legal %}
+      <tr><td>{{ label }}</td>
+        <td class="right"><b>{% if unit == '%' %}{{ (rule.value * 100)|round|int }}%{% elif unit == ':00' %}{{ rule.value|int }}:00{% else %}{{ rule.value|int }} {{ unit }}{% endif %}</b></td>
+        <td class="muted small">{{ rule.source }}</td></tr>
+      {% endfor %}
+    </table></div>
+  </div>
+  <div class="card">
+    <h3>Reglas de su clínica</h3>
+    <p class="muted">Cada clínica pone sus propios límites, más exigentes que la ley si quiere.</p>
+    <form method="post" class="form">
+      <label>{{ policy.max_consecutive_nights.label }}
+        <input type="number" name="max_consecutive_nights" min="1" max="7" value="{{ clinic.policy.max_consecutive_nights }}"></label>
+      <label>{{ policy.max_consecutive_work_days.label }}
+        <input type="number" name="max_consecutive_work_days" min="1" max="7" value="{{ clinic.policy.max_consecutive_work_days }}"></label>
+      <label>{{ policy.max_weekly_hours.label }}
+        <input type="number" name="max_weekly_hours" min="12" max="66" value="{{ clinic.policy.max_weekly_hours }}"></label>
+      <label class="check"><input type="checkbox" name="rest_after_night" {{ 'checked' if clinic.policy.rest_after_night }}> {{ policy.rest_after_night.label }}</label>
+      {% if static_export %}<p class="static-note">En la versión en vivo estas reglas se editan y el cuadro se vuelve a generar.</p>{% else %}<button class="btn">Guardar reglas</button>{% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}

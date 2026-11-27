@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Cuadro publicado</h1>
+<p class="lead">Usted aprobó la versión <b>{{ state.chosen.strategy.label }}</b>. LUNA propone; publicar es siempre decisión del coordinador.</p>
+<div class="cards two">
+  <div class="card">
+    <h3>Qué pasa ahora</h3>
+    <ul class="checks">
+      <li>Cada persona recibe su turno por WhatsApp ({{ state.problem.employees|length }} mensajes, simulado en la demo)</li>
+      <li>Un día antes de cada turno, LUNA le recuerda</li>
+      <li>Si alguien se incapacita, LUNA propone reemplazos legales al instante</li>
+      <li>Los cambios de turno se validan solos: el compañero acepta y el jefe aprueba con un clic</li>
+      <li>Al cierre del mes, las horas salen clasificadas para nómina</li>
+    </ul>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('demo.home') }}">Ver cuadro publicado</a>
+      {% if not static_export %}<a class="btn" href="{{ url_for('demo.export', index=state.selected) }}">Exportar a Excel</a>{% endif %}
+    </div>
+  </div>
+  <div>
+    <h3>Avisos enviados por WhatsApp <span class="badge">simulado</span></h3>
+    <div class="notices">
+      {% for n in notices %}
+      <div class="notice">
+        <span class="notice-to">Para: {{ n.employee.display_name }} · {{ clinic.role_label(n.employee.role) }}</span>
+        <div class="msg bot">Hola {{ n.employee.display_name.replace('Dra. ', '').replace('Dr. ', '').split()[0] }}, ya está publicado tu cuadro de {{ clinic.raw.period.label|lower }}. Tus primeros turnos:
+{% for a in n.shifts %}• {{ weekday_names[state.problem.weekday_of(a.day)] }} {{ a.day + 1 }}: {{ state.problem.shift(a.shift_code).label }} ({{ state.problem.shift(a.shift_code).start }}–{{ state.problem.shift(a.shift_code).end }})
+{% endfor %}Escríbeme si necesitas algo.</div>
+      </div>
+      {% endfor %}
+      <p class="muted small">… y {{ state.problem.employees|length - notices|length }} avisos más, uno por persona.</p>
+    </div>
+  </div>
+</div>
+<div class="next">
+  <a class="btn" href="{{ url_for('demo.absences') }}">Probar una novedad →</a>
+  <a class="btn primary" href="{{ url_for('demo.whatsapp') }}">Probar WhatsApp →</a>
+</div>
+{% endblock %}
