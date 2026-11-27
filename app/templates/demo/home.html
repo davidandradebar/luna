@@ -38,6 +38,11 @@
     <b class="kpi-value">{{ ((summary.pref_rate * 100)|round|int) ~ '%' if summary else '—' }}</b>
     <span class="kpi-note">{% if summary %}{% if summary.unmet %}A {{ summary.unmet|length }} persona(s) no se les pudo cumplir{% else %}Todas cumplidas{% endif %}{% else %}Lo que pidió cada persona{% endif %}</span>
   </div>
+  <div class="kpi">
+    <span class="kpi-label">Turnos cubiertos</span>
+    <b class="kpi-value">{{ (slots - summary.gaps|length) ~ '/' ~ slots if summary else '—' }}</b>
+    <span class="kpi-note">{% if summary %}{% if summary.gaps %}Hay turnos sin cubrir{% else %}Todos los servicios completos{% endif %}{% else %}Personal mínimo por turno{% endif %}</span>
+  </div>
   <div class="kpi {{ 'ok' if summary and not summary.alerts }} {{ 'alert' if summary and summary.alerts }}">
     <span class="kpi-label">Alertas legales</span>
     <b class="kpi-value">{{ summary.alerts|length if summary else '—' }}</b>
@@ -53,6 +58,7 @@
   {% endfor %}
 </section>
 
+<div class="workspace">
 <section class="board">
   <div class="board-head">
     <div class="tabs" id="svc-tabs">
@@ -89,23 +95,58 @@
   </table>
   </div>
 </section>
+
+<aside class="inbox">
+  <h2>Para revisar</h2>
+  {% for r in swaps %}
+  <div class="item">
+    <span class="item-kind">Cambio de turno · WhatsApp</span>
+    <b>{{ clinic.employee_name(r.other) }} cubriría a {{ clinic.employee_name(r.requester) }}</b>
+    <span class="muted small">{{ weekday_names[state.problem.weekday_of(r.day)] }} {{ r.day + 1 }} · {{ state.problem.shift(r.check.mine.shift_code).label }} en {{ clinic.service_label(r.check.mine.service).replace('Hospitalización ', '') }}</span>
+    {% if r.check.valid %}
+      <span class="verdict ok">✓ Cumple todas las reglas</span>
+      {% if static_export %}<span class="btn small primary disabled">Aprobar</span>{% else %}
+      <form method="post" action="{{ url_for('demo.approve_swap') }}">
+        <input type="hidden" name="index" value="{{ summary.index }}"><input type="hidden" name="key" value="{{ r.key }}">
+        <input type="hidden" name="requester" value="{{ r.requester }}"><input type="hidden" name="other" value="{{ r.other }}"><input type="hidden" name="day" value="{{ r.day }}">
+        <button class="btn small primary">Aprobar</button>
+      </form>{% endif %}
+    {% else %}
+      <span class="verdict no">✕ No se puede: {{ r.check.reasons[0]|lower }}</span>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% if pending_absence %}
+  <div class="item">
+    <span class="item-kind">Novedad · WhatsApp</span>
+    <b>{{ clinic.employee_name(pending_absence.employee_id) }} reporta incapacidad</b>
+    <span class="muted small">{{ weekday_names[state.problem.weekday_of(pending_absence.day)] }} {{ pending_absence.day + 1 }} · tiene turno ese día</span>
+    <a class="btn small" href="{{ url_for('demo.absences', emp=pending_absence.employee_id, dia=pending_absence.day + 1, clave=pending_absence.key) }}">Buscar reemplazo</a>
+  </div>
+  {% endif %}
+  {% if summary.unmet %}
+  <div class="item">
+    <span class="item-kind">Preferencias</span>
+    <b>{{ summary.unmet|length }} no se pudieron cumplir</b>
+    <ul class="mini">{% for u in summary.unmet[:3] %}<li>{{ clinic.employee_name(u.preference.employee_id) }}: {{ u.preference.note|lower }}</li>{% endfor %}</ul>
+    <span class="muted small">El próximo mes tendrán prioridad.</span>
+  </div>
+  {% endif %}
+  {% if state.log %}
+  <div class="item">
+    <span class="item-kind">Actividad</span>
+    <ul class="mini">{% for l in state.log[-3:] %}<li>{{ l }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+</aside>
+</div>
 {% else %}
 <section class="empty">
   <p>Todavía no hay cuadro para {{ clinic.raw.period.label|lower }}. Al tocar <b>Generar cuadro</b>, LUNA reparte los turnos respetando la ley, las reglas de la clínica y lo que pidió cada persona.</p>
 </section>
 {% endif %}
 
-<section class="details">
-  <h2>Ver detalle</h2>
-  <div class="detail-grid">
-    <a class="detail" href="{{ url_for('demo.clinic') }}"><b>Reglas de la clínica</b><span>Personal por turno, ley y límites propios</span></a>
-    <a class="detail" href="{{ url_for('demo.team') }}"><b>Equipo y preferencias</b><span>Quién puede dónde y qué pidió cada uno</span></a>
-    {% if summary %}<a class="detail" href="{{ url_for('demo.compare') }}"><b>Comparar versiones</b><span>Costo, preferencias y reparto de noches</span></a>{% endif %}
-    {% if summary %}<a class="detail" href="{{ url_for('demo.absences') }}"><b>Novedades</b><span>Una incapacidad y sus reemplazos legales</span></a>{% endif %}
-    <a class="detail" href="{{ url_for('demo.whatsapp') }}"><b>WhatsApp del equipo</b><span>Consultas, días libres y cambios de turno</span></a>
-    <a class="detail" href="{{ url_for('demo.generate') }}"><b>Cómo decide LUNA</b><span>Lo que nunca se rompe y lo que se busca cumplir</span></a>
-  </div>
-</section>
+
 
 <dialog id="why">
   <form method="dialog"><button class="close" aria-label="Cerrar">✕</button></form>

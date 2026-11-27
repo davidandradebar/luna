@@ -27,6 +27,7 @@ class DemoState:
     chats: dict[str, list[dict]] = field(default_factory=dict)
     lock: threading.Lock = field(default_factory=threading.Lock)
     today_override: date | None = None
+    handled: set[str] = field(default_factory=set)
 
     def generate(self, time_limit_s: float) -> None:
         with self.lock:
@@ -39,6 +40,7 @@ class DemoState:
             self.selected = None
             self.status = STATUS_DRAFT
             self.log = []
+            self.handled = set()
 
     @property
     def chosen(self) -> RosterProposal | None:

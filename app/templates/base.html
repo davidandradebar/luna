@@ -1,3 +1,12 @@
+{% set nav = [
+  ('demo.home', 'Cuadro del mes', '▦'),
+  ('demo.compare', 'Versiones y costos', '⇄'),
+  ('demo.team', 'Equipo', '◉'),
+  ('demo.absences', 'Novedades', '✚'),
+  ('demo.whatsapp', 'Mensajes', '✉'),
+  ('demo.clinic', 'Reglas', '⚙'),
+  ('demo.generate', 'Cómo decide LUNA', '?'),
+] %}
 <!doctype html>
 <html lang="es">
 <head>
@@ -9,30 +18,40 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='luna.css') }}">
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="{{ url_for('demo.home') }}">LUNA</a>
-      <span class="tenant">{{ clinic.raw.tenant.name }} · {{ clinic.raw.period.label }}</span>
-      <span class="signature">by <b>Joint Solutions</b></span>
+<div class="app">
+  <aside class="sidebar">
+    <a class="brand" href="{{ url_for('demo.home') }}">LUNA<span>Cuadro de turnos</span></a>
+    <nav class="nav">
+      {% for endpoint, label, icon in nav %}
+        <a href="{{ url_for(endpoint) }}" class="{{ 'active' if request.endpoint == endpoint or (endpoint == 'demo.home' and request.endpoint in ('demo.published', 'demo.roster')) }}"><span class="ico" aria-hidden="true">{{ icon }}</span>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <div class="sidebar-foot">
+      <div class="user"><span class="avatar">CE</span><div><b>Coordinación</b><small>Enfermería · Sede principal</small></div></div>
+      <div class="by"><img class="joint-logo" src="{{ url_for('static', filename='img/logo_joint_blanco.png') }}" alt="Joint Solutions"><span class="tagline">Soluciones Efectivas</span></div>
     </div>
-  </header>
-  <main class="container">
-    {% if request.endpoint != 'demo.home' %}
-      <a class="back" href="{{ url_for('demo.home') }}">← Volver al cuadro del mes</a>
-    {% endif %}
-    {% with messages = get_flashed_messages() %}
-      {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
-    {% endwith %}
-    {% block content %}{% endblock %}
-  </main>
-  <footer class="footer">
-    <div class="footer-inner">
-      <img class="joint-logo" src="{{ url_for('static', filename='img/logo_joint_blanco.png') }}" alt="Joint Solutions">
-      <span class="tagline">Soluciones Efectivas</span>
-      <span class="footer-note">Demo con datos ficticios · Valores legales por verificar
-        {% if not static_export %} · <form method="post" action="{{ url_for('demo.restart') }}" class="inline"><button class="link">Reiniciar demo</button></form>{% endif %}</span>
-    </div>
-  </footer>
-  {% block scripts %}{% endblock %}
+  </aside>
+  <div class="main">
+    <header class="appbar">
+      <div class="crumbs"><b>{{ clinic.raw.tenant.name }}</b><span>·</span>Sede principal</div>
+      <div class="appbar-right">
+        <span class="chip-period">📅 {{ clinic.raw.period.label }}</span>
+        {% if state.proposals %}
+          <span class="status status-{{ 'pub' if state.selected is not none else 'draft' }}">{{ state.status|capitalize if state.selected is not none else 'Borrador' }}</span>
+        {% endif %}
+      </div>
+    </header>
+    <main class="content">
+      {% with messages = get_flashed_messages() %}
+        {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="footnote">Demo con datos ficticios · Valores legales por verificar
+      {% if not static_export %} · <form method="post" action="{{ url_for('demo.restart') }}" class="inline"><button class="link">Reiniciar demo</button></form>{% endif %}
+    </footer>
+  </div>
+</div>
+{% block scripts %}{% endblock %}
 </body>
 </html>

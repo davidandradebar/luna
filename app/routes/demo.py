@@ -17,9 +17,10 @@ from flask import (
 )
 
 from app.demo.export import build_workbook
+from app.demo.requests import absence_request, swap_requests
 from app.demo.state import get_state, reset_state
 from app.demo.whatsapp import reply
-from engine.checks import legal_alerts
+from engine.checks import apply_swap, check_swap, legal_alerts
 from engine.cost import roster_cost
 from engine.explain import explain
 from engine.metrics import coverage_gaps, fairness, preference_rate, preference_results
@@ -129,6 +130,8 @@ def home():
             index = 0
         context |= {"summary": _summary(index), **_grid(index)}
         context["versions"] = [_summary(i) for i in range(len(state.proposals))]
+        context["swaps"] = swap_requests(state, index)
+        context["pending_absence"] = absence_request(state, index)
     return render_template("demo/home.html", **context)
 
 
@@ -307,6 +310,8 @@ def absences():
         employee_id = request.form["employee_id"]
         day = int(request.form["day"]) - 1
         affected, options = state.register_absence(employee_id, day, request.form["kind"])
+        if request.form.get("key"):
+            state.handled.add(request.form["key"])
         if affected is None:
             flash("Novedad registrada. Esa persona no tenía turno ese día; no hay que reemplazar.")
     return render_template(
@@ -314,7 +319,9 @@ def absences():
         affected=affected,
         options=options,
         kinds=ABSENCE_KINDS,
-        step=6,
+        prefill_emp=request.args.get("emp", ""),
+        prefill_day=request.args.get("dia", type=int) or state.today().day,
+        prefill_key=request.args.get("clave", ""),
     )
 
 
@@ -330,6 +337,25 @@ def apply_replacement():
     state.apply_replacement(affected, request.form["replacement_id"])
     flash("Reemplazo aplicado. El cuadro quedó ajustado y se notificó por WhatsApp (simulado).")
     index = state.selected if state.selected is not None else 0
+    return redirect(url_for("demo.home", v=index))
+
+
+@bp.post("/solicitudes/cambio")
+def approve_swap():
+    state = get_state()
+    index = int(request.form["index"])
+    requester, other, day = request.form["requester"], request.form["other"], int(request.form["day"])
+    check = check_swap(state.problem, state.proposals[index], requester, other, day)
+    if check.valid:
+        apply_swap(check, other)
+        state.handled.add(request.form["key"])
+        state.log.append(
+            f"Cambio aprobado: {state.clinic.employee_name(other)} cubre a "
+            f"{state.clinic.employee_name(requester)} el día {day + 1}."
+        )
+        flash("Cambio aprobado. Ambos reciben la confirmación por WhatsApp (simulado).")
+    else:
+        flash("El cambio ya no es válido con el cuadro actual.")
     return redirect(url_for("demo.home", v=index))
 
 

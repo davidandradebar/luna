@@ -101,3 +101,30 @@ def test_guided_flow_end_to_end():
     assert export.status_code == 200
     assert export.data[:2] == b"PK"
     reset_state()
+
+
+def test_valid_swap_request_can_be_approved():
+    from app.demo.requests import swap_requests
+    from app.demo.state import get_state
+
+    reset_state()
+    client = create_app(TestConfig).test_client()
+    client.post("/generar")
+    state = get_state()
+    requests = swap_requests(state, 0)
+    valid = next(r for r in requests if r.check.valid)
+    response = client.post(
+        "/solicitudes/cambio",
+        data={
+            "index": 0,
+            "key": valid.key,
+            "requester": valid.requester,
+            "other": valid.other,
+            "day": valid.day,
+        },
+    )
+    assert response.status_code == 302
+    assert state.proposals[0].at(valid.other, valid.day) is not None
+    assert state.proposals[0].at(valid.requester, valid.day) is None
+    assert legal_alerts(state.problem, state.proposals[0]) == []
+    reset_state()

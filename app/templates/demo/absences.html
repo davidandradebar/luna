@@ -5,8 +5,9 @@
 {% if static_export %}<p class="static-note">Ejemplo ya registrado. En la versión en vivo se elige persona, día y tipo de novedad.</p>{% endif %}
 <div class="card">
   <form method="post" class="form row">
-    <select name="employee_id">{% for e in state.problem.employees %}<option value="{{ e.id }}">{{ e.display_name }} · {{ clinic.role_label(e.role) }}</option>{% endfor %}</select>
-    <label>Día <input type="number" name="day" min="1" max="{{ clinic.days }}" value="{{ state.today().day }}"></label>
+    <select name="employee_id">{% for e in state.problem.employees %}<option value="{{ e.id }}" {{ 'selected' if e.id == prefill_emp }}>{{ e.display_name }} · {{ clinic.role_label(e.role) }}</option>{% endfor %}</select>
+    <label>Día <input type="number" name="day" min="1" max="{{ clinic.days }}" value="{{ prefill_day }}"></label>
+    <input type="hidden" name="key" value="{{ prefill_key }}">
     <select name="kind">{% for k in kinds %}<option>{{ k }}</option>{% endfor %}</select>
     {% if not static_export %}<button class="btn primary">Registrar novedad</button>{% endif %}
   </form>

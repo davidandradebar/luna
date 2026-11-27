@@ -106,3 +106,43 @@ def legal_alerts(problem: RosterProblem, proposal: RosterProposal) -> list[str]:
     for gap in coverage_gaps(problem, proposal):
         alerts.append(f"Día {gap.day + 1}: falta personal en {gap.service} ({gap.shift_code})")
     return alerts
+
+
+@dataclass
+class SwapCheck:
+    mine: Assignment | None
+    theirs: Assignment | None
+    reasons: list[str]
+
+    @property
+    def valid(self) -> bool:
+        return self.mine is not None and not self.reasons
+
+
+def check_swap(
+    problem: RosterProblem, proposal: RosterProposal, requester: str, other: str, day: int
+) -> SwapCheck:
+    """Valida que 'other' tome el turno de 'requester' (o lo intercambien si ambos trabajan)."""
+    mine = proposal.at(requester, day)
+    if mine is None:
+        return SwapCheck(None, None, ["No tiene turno ese día"])
+    if problem.employee(other).role != problem.employee(requester).role:
+        return SwapCheck(mine, None, ["Tienen cargos distintos"])
+    theirs = proposal.at(other, day)
+    if theirs and theirs.shift_code == mine.shift_code and theirs.service == mine.service:
+        return SwapCheck(mine, theirs, ["Tienen el mismo turno"])
+    reasons = blocking_reasons(problem, proposal, other, day, mine.shift_code, mine.service, ignore=theirs)
+    if theirs and not reasons:
+        reasons = blocking_reasons(
+            problem, proposal, requester, day, theirs.shift_code, theirs.service, ignore=mine
+        )
+    return SwapCheck(mine, theirs, reasons)
+
+
+def apply_swap(check: SwapCheck, other: str) -> None:
+    """Aplica un cambio ya validado: intercambia turnos o reasigna el turno."""
+    if not check.valid:
+        raise ValueError("Cambio no válido")
+    if check.theirs:
+        check.theirs.employee_id = check.mine.employee_id
+    check.mine.employee_id = other
