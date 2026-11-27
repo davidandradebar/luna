@@ -88,7 +88,8 @@ def test_guided_flow_end_to_end():
         assert client.get(url).status_code == 200
     assert client.post("/generar").status_code == 302
     home = client.get("/").get_data(as_text=True)
-    assert "Alertas legales" in home and "Aprobar y publicar" in home
+    assert "Pulso del hospital" in home and "Aprobar y publicar" in home
+    assert "alertas legales" in home and "El mes de un vistazo" in home
     assert client.get("/?v=2").status_code == 200
     assert client.get("/comparar").status_code == 200
     assert client.get("/cuadro/0").status_code == 200

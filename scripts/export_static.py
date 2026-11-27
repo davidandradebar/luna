@@ -69,6 +69,8 @@ def main(out: Path) -> None:
 
     pages = ["/", "/clinica", "/equipo", "/generar", "/comparar"]
     pages += [f"/?v={i}" for i in range(1, len(state.proposals))]
+    services = ["todos"] + [s["id"] for s in state.clinic.raw["services"]]
+    pages += [f"/cuadro/{i}?servicio={s}" for i in range(len(state.proposals)) for s in services]
 
     def save(path: str) -> None:
         html = client.get(path).get_data(as_text=True)

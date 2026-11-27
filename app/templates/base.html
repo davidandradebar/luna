@@ -1,5 +1,6 @@
 {% set nav = [
-  ('demo.home', 'Cuadro del mes', '▦'),
+  ('demo.home', 'Pulso del hospital', '◐'),
+  ('demo.roster', 'Cuadro del mes', '▦'),
   ('demo.compare', 'Versiones y costos', '⇄'),
   ('demo.team', 'Equipo', '◉'),
   ('demo.absences', 'Novedades', '✚'),
@@ -23,7 +24,8 @@
     <a class="brand" href="{{ url_for('demo.home') }}">LUNA<span>Cuadro de turnos</span></a>
     <nav class="nav">
       {% for endpoint, label, icon in nav %}
-        <a href="{{ url_for(endpoint) }}" class="{{ 'active' if request.endpoint == endpoint or (endpoint == 'demo.home' and request.endpoint in ('demo.published', 'demo.roster')) }}"><span class="ico" aria-hidden="true">{{ icon }}</span>{{ label }}</a>
+        {% if endpoint == 'demo.roster' %}{% set href = url_for('demo.roster', index=state.selected if state.selected is not none else 0) if state.proposals else url_for('demo.home') %}{% else %}{% set href = url_for(endpoint) %}{% endif %}
+        <a href="{{ href }}" class="{{ 'active' if request.endpoint == endpoint or (endpoint == 'demo.home' and request.endpoint == 'demo.published') }}"><span class="ico" aria-hidden="true">{{ icon }}</span>{{ label }}</a>
       {% endfor %}
     </nav>
     <div class="sidebar-foot">

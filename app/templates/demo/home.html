@@ -1,108 +1,92 @@
 {% extends "base.html" %}
+{% block title %}LUNA · Pulso del hospital{% endblock %}
 {% block content %}
-<section class="intro">
-  <div>
-    <p class="eyebrow">Cuadro de turnos · {{ clinic.raw.period.label }}</p>
-    <h1>{% if summary %}El mes está listo para revisar{% else %}Arme el mes con un botón{% endif %}</h1>
-    <p class="lead">{{ people }} personas, {{ slots }} turnos por cubrir y {{ preferences }} preferencias del equipo. LUNA cumple todas las reglas y usted aprueba.</p>
-  </div>
-  <div class="intro-actions">
-    {% if static_export %}
-      {% if not summary %}<a class="btn generate" href="{{ url_for('demo.home') }}">Generar cuadro</a>{% endif %}
-    {% else %}
-    <form method="post" action="{{ url_for('demo.generate') }}" id="gen-form">
-      <button class="btn generate" id="gen-btn">{% if summary %}Volver a generar{% else %}Generar cuadro{% endif %}</button>
-    </form>
-    {% endif %}
+{% set review_count = (swaps|length if swaps else 0) + (1 if pending_absence else 0) %}
+<section class="luna-says">
+  <div class="moon" aria-hidden="true"></div>
+  <div class="luna-text">
+    <p class="eyebrow light">LUNA · {{ clinic.raw.period.label }}</p>
     {% if summary %}
-      {% if static_export %}
-        <a class="btn primary" href="{{ url_for('demo.published') }}">Aprobar y publicar</a>
-      {% elif state.selected == summary.index %}
-        <span class="badge">{{ state.status|capitalize }}</span>
-      {% else %}
-        <form method="post" action="{{ url_for('demo.publish', index=summary.index) }}"><button class="btn primary">Aprobar y publicar</button></form>
-      {% endif %}
+    <p class="luna-line">Armé el mes. Los <b>{{ slots - summary.gaps|length }} turnos</b> quedan cubiertos, se cumple el <b>{{ (summary.pref_rate * 100)|round|int }}%</b> de lo que pidió el equipo, cuesta <b>{{ summary.cost.total|cop }}</b> y {% if summary.alerts %}hay <b>{{ summary.alerts|length }} alerta(s) legal(es)</b>{% else %}<b>no hay alertas legales</b>{% endif %}.
+      {% if review_count %}Te dejé {{ review_count }} cosa{{ 's' if review_count != 1 }} para revisar.{% else %}No queda nada pendiente.{% endif %}</p>
+    {% else %}
+    <p class="luna-line">Hola, soy LUNA. Tengo {{ people }} personas, {{ slots }} turnos por cubrir y {{ preferences }} preferencias del equipo. Toca <b>Generar</b> y armo el mes cumpliendo la ley y las reglas de la clínica.</p>
     {% endif %}
+    <div class="luna-actions">
+      {% if static_export %}
+        {% if not summary %}<a class="btn generate" href="{{ url_for('demo.home') }}">Generar cuadro</a>{% endif %}
+      {% else %}
+      <form method="post" action="{{ url_for('demo.generate') }}" id="gen-form">
+        <button class="btn generate" id="gen-btn">{% if summary %}Volver a generar{% else %}Generar cuadro{% endif %}</button>
+      </form>
+      {% endif %}
+      {% if summary %}
+        {% if static_export %}
+          <a class="btn primary on-dark" href="{{ url_for('demo.published') }}">Aprobar y publicar</a>
+        {% elif state.selected == summary.index %}
+          <span class="badge">{{ state.status|capitalize }}</span>
+        {% else %}
+          <form method="post" action="{{ url_for('demo.publish', index=summary.index) }}"><button class="btn primary on-dark">Aprobar y publicar</button></form>
+        {% endif %}
+        <a class="btn ghost" href="{{ url_for('demo.roster', index=summary.index) }}">Ver cuadro completo</a>
+      {% endif %}
+    </div>
+    <p class="wait" id="gen-wait" hidden>Estoy armando el mes… unos segundos.</p>
   </div>
-</section>
-<p class="wait" id="gen-wait" hidden>LUNA está armando el mes… unos segundos.</p>
-
-<section class="kpis-row">
-  <div class="kpi">
-    <span class="kpi-label">Costo estimado del mes</span>
-    <b class="kpi-value">{{ summary.cost.total|cop if summary else '—' }}</b>
-    <span class="kpi-note">{% if summary %}Incluye {{ summary.cost.surcharges|cop }} de recargos nocturnos y festivos{% else %}Se calcula antes de publicar{% endif %}</span>
+  {% if summary %}
+  <div class="luna-versions" aria-label="Versiones">
+    <span>Versiones</span>
+    {% for v in versions %}
+      <a href="{{ url_for('demo.home', v=v.index) }}" class="seg dark {{ 'active' if v.index == summary.index }}">{{ v.proposal.strategy.label }}{% if v.proposal.strategy.key == 'balanced' %} ★{% endif %}<small>{{ v.cost.total|cop }} · {{ (v.pref_rate * 100)|round|int }}%</small></a>
+    {% endfor %}
   </div>
-  <div class="kpi">
-    <span class="kpi-label">Preferencias cumplidas</span>
-    <b class="kpi-value">{{ ((summary.pref_rate * 100)|round|int) ~ '%' if summary else '—' }}</b>
-    <span class="kpi-note">{% if summary %}{% if summary.unmet %}A {{ summary.unmet|length }} persona(s) no se les pudo cumplir{% else %}Todas cumplidas{% endif %}{% else %}Lo que pidió cada persona{% endif %}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi-label">Turnos cubiertos</span>
-    <b class="kpi-value">{{ (slots - summary.gaps|length) ~ '/' ~ slots if summary else '—' }}</b>
-    <span class="kpi-note">{% if summary %}{% if summary.gaps %}Hay turnos sin cubrir{% else %}Todos los servicios completos{% endif %}{% else %}Personal mínimo por turno{% endif %}</span>
-  </div>
-  <div class="kpi {{ 'ok' if summary and not summary.alerts }} {{ 'alert' if summary and summary.alerts }}">
-    <span class="kpi-label">Alertas legales</span>
-    <b class="kpi-value">{{ summary.alerts|length if summary else '—' }}</b>
-    <span class="kpi-note">{% if summary %}{% if summary.alerts %}{{ summary.alerts[0] }}{% else %}Horas, descansos y cobertura en regla{% endif %}{% else %}Jornada, descansos y cobertura{% endif %}</span>
-  </div>
+  {% endif %}
 </section>
 
 {% if summary %}
-<section class="versions" aria-label="Versiones">
-  <span class="muted small">LUNA preparó 3 versiones:</span>
-  {% for v in versions %}
-    <a href="{{ url_for('demo.home', v=v.index) }}" class="seg {{ 'active' if v.index == summary.index }}">{{ v.proposal.strategy.label }}{% if v.proposal.strategy.key == 'balanced' %} · recomendada{% endif %}</a>
-  {% endfor %}
-</section>
-
 <div class="workspace">
-<section class="board">
-  <div class="board-head">
-    <div class="tabs" id="svc-tabs">
-      <button class="active" data-svc="todos">Todos</button>
-      {% for s in clinic.raw.services %}<button data-svc="{{ s.id }}">{{ s.name.replace('Hospitalización ', '').capitalize() }}</button>{% endfor %}
+<section class="pulse" aria-labelledby="pulse-title">
+  <div class="pulse-head">
+    <div>
+      <h2 id="pulse-title">Pulso del hospital</h2>
+      <p class="muted small" id="pulse-when"><span class="live-dot"></span>Ahora · {{ pulse_days[today].label }} · {{ demo_hour }}:00 a. m.</p>
     </div>
     <div class="legend">
       {% for t in clinic.raw.shift_types %}<span><i class="shift shift-{{ t.code }}">{{ t.code }}</i> {{ t.label }} {{ t.start }}–{{ t.end }}</span>{% endfor %}
-      <span class="muted">Toque un turno para ver por qué</span>
     </div>
   </div>
-  <div class="grid-wrap">
-  <table class="roster">
-    <thead>
-      <tr><th class="sticky">Persona</th>{% for d in days %}<th class="{{ 'holiday' if d.holiday }}">{{ weekday_short[d.weekday] }}<br>{{ d.number }}</th>{% endfor %}<th>Horas</th></tr>
-    </thead>
-    <tbody>
-    {% set ns = namespace(role='') %}
-    {% for r in rows %}
-      {% set e = r.employee %}
-      {% if e.role != ns.role %}{% set ns.role = e.role %}<tr class="group"><td class="sticky" colspan="{{ days|length + 2 }}">{{ clinic.role_label(e.role) }}</td></tr>{% endif %}
-      <tr data-services="{{ r.services|join(' ') }}">
-        <td class="sticky name">{{ e.display_name }}</td>
-        {% for d in days %}
-          {% set a = grid.get((e.id, d.index)) %}
-          <td class="cell {{ 'holiday' if d.holiday }}" data-emp="{{ e.id }}" data-day="{{ d.index }}" {% if a %}data-svc="{{ a.service }}"{% endif %}>
-            {% if a %}<i class="shift shift-{{ a.shift_code }}">{{ a.shift_code }}</i>{% elif (e.id, d.index) in absences %}<i class="shift shift-X">✕</i>{% endif %}
-          </td>
-        {% endfor %}
-        <td class="center"><b>{{ r.hours }}</b></td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  </div>
+  {% for sid, sname in service_names.items() %}
+  <article class="unit" data-svc="{{ sid }}">
+    <div class="clock-wrap">
+      <svg class="clock" viewBox="0 0 120 120" role="img" aria-label="Turnos de 24 horas en {{ sname }}">
+        <circle cx="60" cy="60" r="46" class="clock-track"/>
+        {% for code, d in arcs.items() %}<path d="{{ d }}" class="arc arc-{{ code }} {{ 'now' if code == now_shift }}" data-shift="{{ code }}"/>{% endfor %}
+        <line x1="60" y1="60" x2="{{ hand.x }}" y2="{{ hand.y }}" class="hand"/>
+        <circle cx="60" cy="60" r="3.5" class="hand-dot"/>
+        <text x="60" y="8.5" class="clock-tick">12</text><text x="60" y="117" class="clock-tick">24</text>
+        <text x="114" y="62.5" class="clock-tick">18</text><text x="6" y="62.5" class="clock-tick">6</text>
+      </svg>
+      <div class="unit-name"><b>{{ sname }}</b><span class="unit-status"></span></div>
+    </div>
+    <div class="crews">
+      {% for t in clinic.raw.shift_types %}
+      <div class="crew crew-{{ t.code }}" data-shift="{{ t.code }}">
+        <div class="crew-head"><span>{{ t.label }}</span><span class="crew-count"></span></div>
+        <ul class="people"></ul>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+  {% endfor %}
 </section>
 
 <aside class="inbox">
   <h2>Para revisar</h2>
   {% for r in swaps %}
-  <div class="item">
+  <div class="item" data-day="{{ r.day }}">
     <span class="item-kind">Cambio de turno · WhatsApp</span>
     <b>{{ clinic.employee_name(r.other) }} cubriría a {{ clinic.employee_name(r.requester) }}</b>
-    <span class="muted small">{{ weekday_names[state.problem.weekday_of(r.day)] }} {{ r.day + 1 }} · {{ state.problem.shift(r.check.mine.shift_code).label }} en {{ clinic.service_label(r.check.mine.service).replace('Hospitalización ', '') }}</span>
+    <button class="daylink" data-day="{{ r.day }}">{{ weekday_names[state.problem.weekday_of(r.day)] }} {{ r.day + 1 }} · {{ state.problem.shift(r.check.mine.shift_code).label }} en {{ clinic.service_label(r.check.mine.service).replace('Hospitalización ', '') }}</button>
     {% if r.check.valid %}
       <span class="verdict ok">✓ Cumple todas las reglas</span>
       {% if static_export %}<span class="btn small primary disabled">Aprobar</span>{% else %}
@@ -117,10 +101,10 @@
   </div>
   {% endfor %}
   {% if pending_absence %}
-  <div class="item">
+  <div class="item" data-day="{{ pending_absence.day }}">
     <span class="item-kind">Novedad · WhatsApp</span>
     <b>{{ clinic.employee_name(pending_absence.employee_id) }} reporta incapacidad</b>
-    <span class="muted small">{{ weekday_names[state.problem.weekday_of(pending_absence.day)] }} {{ pending_absence.day + 1 }} · tiene turno ese día</span>
+    <button class="daylink" data-day="{{ pending_absence.day }}">{{ weekday_names[state.problem.weekday_of(pending_absence.day)] }} {{ pending_absence.day + 1 }} · tiene turno ese día</button>
     <a class="btn small" href="{{ url_for('demo.absences', emp=pending_absence.employee_id, dia=pending_absence.day + 1, clave=pending_absence.key) }}">Buscar reemplazo</a>
   </div>
   {% endif %}
@@ -140,22 +124,45 @@
   {% endif %}
 </aside>
 </div>
+
+<section class="month" aria-labelledby="month-title">
+  <div class="pulse-head">
+    <div>
+      <h2 id="month-title">El mes de un vistazo</h2>
+      <p class="muted small">Cada casilla es un turno con el número de personas asignadas. Toca un día para ver quién está.</p>
+    </div>
+    <div class="legend"><span><i class="mk mk-swap">⇄</i> Cambio pedido</span><span><i class="mk mk-abs">✚</i> Novedad</span><span><i class="hol-key"></i> Domingo o festivo</span></div>
+  </div>
+  {% set marks = namespace(swap=[], abs=[]) %}
+  {% for r in swaps %}{% set marks.swap = marks.swap + [r.day] %}{% endfor %}
+  {% if pending_absence %}{% set marks.abs = [pending_absence.day] %}{% endif %}
+  <div class="month-wrap">
+  <table class="month-grid">
+    <thead>
+      <tr class="marks"><th></th>{% for d in pulse_days %}<th>{% if d.index in marks.swap %}<i class="mk mk-swap">⇄</i>{% endif %}{% if d.index in marks.abs %}<i class="mk mk-abs">✚</i>{% endif %}</th>{% endfor %}</tr>
+      <tr><th class="sticky"></th>{% for d in pulse_days %}<th class="day {{ 'holiday' if d.holiday }} {{ 'today' if d.index == today }}" data-day="{{ d.index }}"><button data-day="{{ d.index }}">{{ d.short }}<br>{{ d.index + 1 }}</button></th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+    {% for sid, sname in service_names.items() %}
+      {% for t in clinic.raw.shift_types %}
+      <tr class="{{ 'svc-first' if loop.first }}">
+        <th class="sticky">{% if loop.first %}<b>{{ sname }}</b>{% endif %}<span>{{ t.label }}</span></th>
+        {% for d in pulse_days %}
+          {% set c = d.services[sid][t.code] %}
+          <td class="r r-{{ t.code }} {{ 'short' if c.people|length < c.need }} {{ 'holiday' if d.holiday }} {{ 'today' if d.index == today }}" data-day="{{ d.index }}" title="{{ d.label }} · {{ t.label }}: {{ c.people|length }} de {{ c.need }}">{{ c.people|length if c.people else '' }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
 {% else %}
 <section class="empty">
   <p>Todavía no hay cuadro para {{ clinic.raw.period.label|lower }}. Al tocar <b>Generar cuadro</b>, LUNA reparte los turnos respetando la ley, las reglas de la clínica y lo que pidió cada persona.</p>
 </section>
 {% endif %}
-
-
-
-<dialog id="why">
-  <form method="dialog"><button class="close" aria-label="Cerrar">✕</button></form>
-  <p class="muted small" id="why-date"></p>
-  <h2 id="why-name"></h2>
-  <h3 id="why-title"></h3>
-  <ul id="why-lines" class="checks"></ul>
-  <p class="muted small" id="why-hours"></p>
-</dialog>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -163,31 +170,48 @@
     document.getElementById('gen-btn').disabled = true;
     document.getElementById('gen-wait').hidden = false;
   });
-  document.querySelectorAll('#svc-tabs button').forEach(b => b.addEventListener('click', () => {
-    document.querySelectorAll('#svc-tabs button').forEach(x => x.classList.toggle('active', x === b));
-    const svc = b.dataset.svc;
-    document.querySelectorAll('.roster tbody tr[data-services]').forEach(tr => {
-      tr.hidden = svc !== 'todos' && !tr.dataset.services.split(' ').includes(svc);
-    });
-    document.querySelectorAll('.roster td.cell[data-svc]').forEach(td => td.classList.toggle('dim', svc !== 'todos' && td.dataset.svc !== svc));
-  }));
   {% if summary %}
-  const dlg = document.getElementById('why');
-  document.querySelectorAll('td.cell').forEach(td => td.addEventListener('click', async () => {
-    {% if static_export %}
-    window.LUNA_EXPLAIN = window.LUNA_EXPLAIN || await (await fetch('explicaciones-{{ summary.index }}.json')).json();
-    const data = window.LUNA_EXPLAIN[`${td.dataset.emp}/${td.dataset.day}`];
-    {% else %}
-    const data = await (await fetch(`/api/explicar/{{ summary.index }}/${td.dataset.emp}/${td.dataset.day}`)).json();
-    {% endif %}
-    document.getElementById('why-date').textContent = data.date;
-    document.getElementById('why-name').textContent = data.employee;
-    document.getElementById('why-title').textContent = data.title;
-    const ul = document.getElementById('why-lines'); ul.innerHTML = '';
-    data.lines.forEach(l => { const li = document.createElement('li'); li.textContent = l; ul.appendChild(li); });
-    document.getElementById('why-hours').textContent = `Horas en el mes: ${data.month_hours}`;
-    dlg.showModal();
+  const PULSE = {{ pulse_days|tojson }};
+  const TODAY = {{ today }}, NOW_SHIFT = {{ now_shift|tojson }}, HOUR = {{ demo_hour }};
+  const initials = n => n.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  function show(day) {
+    const d = PULSE[day];
+    const isToday = day === TODAY;
+    document.getElementById('pulse-when').innerHTML = isToday
+      ? `<span class="live-dot"></span>Ahora · ${d.label} · ${HOUR}:00 a. m.`
+      : `${d.label}${d.holiday ? ' · domingo o festivo' : ''} · <button class="link" id="back-today">volver a hoy</button>`;
+    document.getElementById('back-today')?.addEventListener('click', () => show(TODAY));
+    document.querySelectorAll('.unit').forEach(unit => {
+      const svc = d.services[unit.dataset.svc];
+      let missing = 0;
+      unit.querySelectorAll('.crew').forEach(crew => {
+        const c = svc[crew.dataset.shift];
+        missing += Math.max(0, c.need - c.people.length);
+        crew.classList.toggle('now', isToday && crew.dataset.shift === NOW_SHIFT);
+        crew.querySelector('.crew-count').textContent = `${c.people.length} de ${c.need}`;
+        const ul = crew.querySelector('.people'); ul.innerHTML = '';
+        c.people.forEach(p => {
+          const li = document.createElement('li');
+          li.innerHTML = `<span class="av av-${p.role_key}">${initials(p.name)}</span><span><b></b><small></small></span>`;
+          li.querySelector('b').textContent = p.name; li.querySelector('small').textContent = p.role;
+          ul.appendChild(li);
+        });
+        if (!c.people.length) ul.innerHTML = '<li class="none">Sin turno este día</li>';
+      });
+      unit.querySelectorAll('.arc').forEach(a => a.classList.toggle('now', isToday && a.dataset.shift === NOW_SHIFT));
+      unit.querySelector('.hand').style.display = isToday ? '' : 'none';
+      unit.querySelector('.hand-dot').style.display = isToday ? '' : 'none';
+      const st = unit.querySelector('.unit-status');
+      st.textContent = missing ? `Faltan ${missing}` : 'Completo';
+      st.className = 'unit-status ' + (missing ? 'bad' : 'ok');
+    });
+    document.querySelectorAll('.month-grid [data-day]').forEach(el => el.classList.toggle('sel', +el.dataset.day === day));
+  }
+  document.querySelectorAll('.month-grid [data-day], .daylink').forEach(el => el.addEventListener('click', () => {
+    show(+el.dataset.day);
+    if (el.classList.contains('daylink')) document.querySelector('.pulse').scrollIntoView({ behavior: 'smooth' });
   }));
+  show(TODAY);
   {% endif %}
 </script>
 {% endblock %}

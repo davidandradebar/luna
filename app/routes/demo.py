@@ -1,5 +1,6 @@
 """Rutas de la demo guiada."""
 
+import math
 from datetime import date
 from io import BytesIO
 
@@ -107,6 +108,96 @@ def _grid(index: int) -> dict:
     }
 
 
+DEMO_HOUR = 9  # hora de referencia del tablero: la reunión es a las 9 a. m.
+ROLE_SHORT = {
+    "psiquiatra": "Psiquiatría",
+    "enfermera_jefe": "Jefe",
+    "auxiliar_enfermeria": "Auxiliar",
+    "psicologo": "Psicología",
+    "terapeuta_ocupacional": "T. ocupacional",
+}
+
+
+def _arc(start: float, end: float, radius: float = 46, center: float = 60) -> str:
+    """Arco SVG de un reloj de 24 horas: el mediodía arriba y la medianoche abajo."""
+    span = (end - start) % 24 or 24
+    start, end = start + 0.12, start + span - 0.12
+
+    def point(hour: float) -> str:
+        angle = (hour - 12) / 24 * 2 * math.pi - math.pi / 2
+        return f"{center + radius * math.cos(angle):.2f} {center + radius * math.sin(angle):.2f}"
+
+    large = 1 if span > 12 else 0
+    return f"M {point(start)} A {radius} {radius} 0 {large} 1 {point(end)}"
+
+
+def _hand(hour: float, radius: float = 34, center: float = 60) -> dict:
+    angle = (hour - 12) / 24 * 2 * math.pi - math.pi / 2
+    x, y = center + radius * math.cos(angle), center + radius * math.sin(angle)
+    return {"x": round(x, 2), "y": round(y, 2)}
+
+
+def _hour_of(text: str) -> int:
+    return int(text.split(":")[0])
+
+
+def _pulse(index: int) -> dict:
+    """Datos del tablero de 24 horas: quién está en cada servicio y turno, día por día."""
+    state = get_state()
+    clinic = state.clinic
+    problem = state.problem
+    proposal = state.proposals[index]
+    shifts = clinic.raw["shift_types"]
+    services = clinic.raw["services"]
+    need: dict[tuple, int] = {}
+    for c in problem.coverage:
+        key = (c.day, c.service, c.shift_code)
+        need[key] = need.get(key, 0) + c.minimum
+    people: dict[tuple, list] = {}
+    for a in sorted(proposal.assignments, key=lambda a: a.employee_id):
+        e = problem.employee(a.employee_id)
+        people.setdefault((a.day, a.service, a.shift_code), []).append(
+            {"name": e.display_name, "role": ROLE_SHORT.get(e.role, e.role), "role_key": e.role}
+        )
+    days = []
+    for d in range(problem.days):
+        days.append(
+            {
+                "index": d,
+                "label": f"{WEEKDAY_NAMES[problem.weekday_of(d)]} {d + 1}",
+                "short": WEEKDAY_SHORT[problem.weekday_of(d)],
+                "holiday": problem.is_sunday_or_holiday(d),
+                "services": {
+                    s["id"]: {
+                        t["code"]: {
+                            "people": people.get((d, s["id"], t["code"]), []),
+                            "need": need.get((d, s["id"], t["code"]), 0),
+                        }
+                        for t in shifts
+                    }
+                    for s in services
+                },
+            }
+        )
+    today = (state.today() - clinic.start).days
+    today = today if 0 <= today < problem.days else 0
+    now_shift = next(
+        t["code"]
+        for t in shifts
+        if (_hour_of(t["start"]) <= DEMO_HOUR < _hour_of(t["end"]))
+        or (t["crosses_midnight"] and (DEMO_HOUR >= _hour_of(t["start"]) or DEMO_HOUR < _hour_of(t["end"])))
+    )
+    return {
+        "pulse_days": days,
+        "today": today,
+        "now_shift": now_shift,
+        "demo_hour": DEMO_HOUR,
+        "arcs": {t["code"]: _arc(_hour_of(t["start"]), _hour_of(t["end"])) for t in shifts},
+        "hand": _hand(DEMO_HOUR),
+        "service_names": {s["id"]: s["name"].replace("Hospitalización ", "").capitalize() for s in services},
+    }
+
+
 def _require_proposals():
     if not get_state().proposals:
         flash("Primero genere los cuadros.")
@@ -132,6 +223,7 @@ def home():
         context["versions"] = [_summary(i) for i in range(len(state.proposals))]
         context["swaps"] = swap_requests(state, index)
         context["pending_absence"] = absence_request(state, index)
+        context |= _pulse(index)
     return render_template("demo/home.html", **context)
 
 
