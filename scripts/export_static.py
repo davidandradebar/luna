@@ -41,7 +41,7 @@ def page_name(path: str) -> str:
         return f"cuadro-{match.group(1)}.xlsx"
     if path.startswith("/static/"):
         return path[1:]
-    return path.strip("/").replace("/", "-") + ".html"
+    return path.split("?")[0].strip("/").replace("/", "-") + ".html"
 
 
 def rewrite(html: str, roster_index: int | None = None) -> str:
