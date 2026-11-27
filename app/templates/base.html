@@ -14,6 +14,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}LUNA · Cuadro de turnos{% endblock %}</title>
+  <script>
+    try { const t = localStorage.getItem('luna-tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', filename='luna.css') }}">
@@ -37,6 +40,7 @@
     <header class="appbar">
       <div class="crumbs"><b>{{ clinic.raw.tenant.name }}</b><span>·</span>Sede principal</div>
       <div class="appbar-right">
+        <button class="theme-toggle" id="theme-toggle" type="button"></button>
         <span class="chip-period">📅 {{ clinic.raw.period.label }}</span>
         {% if state.proposals %}
           <span class="status status-{{ 'pub' if state.selected is not none else 'draft' }}">{{ state.status|capitalize if state.selected is not none else 'Borrador' }}</span>
@@ -54,6 +58,19 @@
     </footer>
   </div>
 </div>
+<script>
+  (() => {
+    const root = document.documentElement, btn = document.getElementById('theme-toggle');
+    const isDark = () => root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    const paint = () => { btn.textContent = isDark() ? '☀ Modo claro' : '☾ Modo oscuro'; };
+    btn.addEventListener('click', () => {
+      root.dataset.theme = isDark() ? 'light' : 'dark';
+      try { localStorage.setItem('luna-tema', root.dataset.theme); } catch (e) {}
+      paint();
+    });
+    paint();
+  })();
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

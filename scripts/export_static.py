@@ -126,7 +126,8 @@ def main(out: Path) -> None:
     body = re.search(r"<body>(.*)</body>", home, re.S).group(1)
     head = re.search(r"<head>(.*)</head>", home, re.S).group(1)
     fonts = "\n".join(re.findall(r'<link rel="(?:preconnect|stylesheet)" href="https://fonts[^>]*>', head))
-    entry = f"{title}\n{fonts}\n<style>{css}</style>\n{body}"
+    scripts = "\n".join(re.findall(r"<script>.*?</script>", head, re.S))
+    entry = f"{title}\n{scripts}\n{fonts}\n<style>{css}</style>\n{body}"
     (out / "index.html").write_text(entry, encoding="utf-8")
     print(f"Exportado en {out}")
 
